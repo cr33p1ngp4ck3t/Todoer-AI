@@ -1,7 +1,40 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(mkdir -p .specify/memory specs history/prompts/constitution history/prompts/general history/adr templates)",
+      "Bash(git fetch:*)",
+      "Bash(powershell -File:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(cat:*)",
+      "Bash(tree:*)",
+      "Bash(npm run dev:*)",
+      "Bash(uvicorn:*)",
+      "Bash(taskkill:*)",
+      "Bash(exit 0)",
+      "Bash(backendvenvScriptsuvicorn src.main:app --reload --port 8000)",
+      "Bash(powershell -Command \"cd D:\\\\vs\\\\AgenticAI\\\\todo-list\\\\frontend; npm run dev\")",
+      "Bash(powershell -Command \"cd D:\\\\vs\\\\AgenticAI\\\\todo-list\\\\backend; .\\\\backend\\\\venv\\\\Scripts\\\\uvicorn.exe src.main:app --reload --port 8000\")",
+      "Bash(powershell -Command \"cd D:\\\\vs\\\\AgenticAI\\\\todo-list\\\\backend; .\\\\venv\\\\Scripts\\\\uvicorn.exe src.main:app --reload --port 8000\")",
+      "Bash(powershell -Command \"cd D:\\\\vs\\\\AgenticAI\\\\todo-list\\\\backend; .\\\\venv\\\\Scripts\\\\python.exe -m pip install -r requirements.txt\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path D:\\\\vs\\\\AgenticAI\\\\todo-list\\\\frontend -Include *.config.*, *.json -Recurse | Select-Object FullName\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path D:\\\\vs\\\\AgenticAI\\\\todo-list\\\\frontend\\\\src\\\\app -Recurse | Select-Object FullName\")",
+      "Bash(powershell -Command \"cd D:\\\\vs\\\\AgenticAI\\\\todo-list\\\\frontend; npm install @tailwindcss/postcss\")",
+      "Bash(powershell -Command \"cd D:\\\\vs\\\\AgenticAI\\\\todo-list\\\\backend; .\\\\venv\\\\Scripts\\\\python.exe -c \"\"from src.main import app; print\\(app.routes\\)\"\"\")",
+      "Bash(powershell -Command:*)",
+      "Bash(curl:*)",
+      "Bash(findstr:*)",
+      "WebSearch",
+      "Bash(netstat:*)",
+      "Bash(.venvScriptspython.exe -c \"import os; from dotenv import load_dotenv; load_dotenv\\(\\); print\\(''DATABASE_URL:'', os.getenv\\(''DATABASE_URL'', ''NOT FOUND''\\)\\)\")",
+      "Bash(python:*)",
+      "WebFetch(domain:neon.com)",
+      "WebFetch(domain:www.better-auth.com)",
+      "Bash(.venvScriptspython.exe -m pip install itsdangerous)",
+      "Bash(xargs:*)",
+      "Bash(Error\" -Context 3 | head -50\")",
+      "Bash(npm run build:*)",
+      "Bash(.venv/Scripts/python.exe -m pytest:*)"
     ]
   }
 }

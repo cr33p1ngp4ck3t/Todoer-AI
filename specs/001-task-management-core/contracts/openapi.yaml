@@ -1,0 +1,60 @@
+openapi: 3.1.0
+info:
+  title: Todo System API (Phase II)
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /tasks:
+    get:
+      summary: List tasks
+      parameters:
+        - name: search
+          in: query
+          schema: {type: string}
+        - name: priority
+          in: query
+          schema: {type: string, enum: [low, medium, high]}
+        - name: status
+          in: query
+          schema: {type: string, enum: [pending, completed]}
+        - name: sort
+          in: query
+          schema: {type: string, enum: [created_at, priority]}
+      responses:
+        '200':
+          description: List of tasks
+    post:
+      summary: Create task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: {type: string}
+                description: {type: string}
+                priority: {type: string, default: medium}
+                tags: {type: array, items: {type: string}}
+      responses:
+        '201':
+          description: Created
+  /tasks/{id}:
+    get:
+      summary: Get task details
+    patch:
+      summary: Update task
+    delete:
+      summary: Delete task
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
