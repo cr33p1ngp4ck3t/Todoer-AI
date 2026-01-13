@@ -11,6 +11,7 @@ import SortDropdown from '../../components/SortDropdown'
 import EditTaskModal from '../../components/EditTaskModal'
 import { useAuth } from '../../contexts/AuthContext'
 import ThemeToggle from '../../components/ThemeToggle'
+import VoiceCommand from '../../components/VoiceCommand'
 import StatsCard from '../../components/StatsCard'
 import ProductivityChart from '../../components/ProductivityChart'
 import { Button } from '../../components/ui/button'
@@ -48,7 +49,7 @@ export default function Dashboard() {
   // Don't render anything while checking auth
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-linear-120 from-[#fdfbfb] to-[#ebedee] dark:bg-neutral-800/80">
+      <div className="bg-linear-120 flex min-h-screen items-center justify-center from-[#fdfbfb] to-[#ebedee] dark:bg-neutral-800/80">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 dark:border-neutral-700"></div>
           <p className="mt-4 text-gray-500 dark:text-gray-400">Loading...</p>
@@ -159,7 +160,7 @@ export default function Dashboard() {
   const completedTasks = tasks.filter((t) => t.status === 'completed')
 
   return (
-    <div className="min-h-screen bg-linear-120 from-[#fbfcfd] to-[#eaf0f3] px-4 py-8 dark:from-[#353434] dark:to-[#252529]">
+    <div className="bg-linear-120 min-h-screen from-[#fbfcfd] to-[#eaf0f3] px-4 py-8 dark:from-[#353434] dark:to-[#252529]">
       <div className="mx-auto max-w-4xl">
         <header className="mb-8 flex items-center justify-between">
           <div>
@@ -172,6 +173,16 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <VoiceCommand
+              onCommandExecuted={(command) => {
+                try {
+                  const parsed = JSON.parse(command)
+                  handleCreateTask(parsed)
+                } catch (e) {
+                  console.error('Failed to parse voice command:', e)
+                }
+              }}
+            />
             <Button
               onClick={() => setShowForm(true)}
               className="bg-neutral-100 hover:bg-neutral-300 dark:bg-neutral-500 dark:hover:bg-neutral-700"

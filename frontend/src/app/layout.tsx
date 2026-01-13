@@ -1,7 +1,7 @@
-import './styles/globals.css'
 import { AuthProvider } from '../contexts/AuthContext'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '../components/ui/sonner'
+import '@/app/styles/globals.css'
 
 export const metadata = {
   title: 'Todoer - Be Productive',

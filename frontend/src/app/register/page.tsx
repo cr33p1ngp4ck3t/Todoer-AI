@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '../../contexts/AuthContext'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -55,13 +56,16 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-linear-120 from-[#fdfbfb] to-[#ebedee] px-4 py-12 sm:px-6 lg:px-8">
+    <div className="bg-linear-120 relative flex min-h-screen items-center justify-center from-[#fdfbfb] to-[#ebedee] px-4 py-12 sm:px-6 lg:px-8">
+      <div className="absolute right-10 top-10">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold">
             Create your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Already have an account?{' '}
             <Link
               href="/login"
@@ -77,7 +81,7 @@ export default function RegisterPage() {
           <button
             type="button"
             onClick={() => handleOAuthLogin('google')}
-            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-md border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:outline-none"
+            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-md border-gray-300 bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 dark:bg-neutral-700 dark:hover:bg-neutral-600"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path
@@ -103,7 +107,7 @@ export default function RegisterPage() {
           <button
             type="button"
             onClick={() => handleOAuthLogin('github')}
-            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-md border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:outline-none"
+            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-md border-gray-300 bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 dark:bg-neutral-700 dark:hover:bg-neutral-600"
           >
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
               <path
@@ -119,10 +123,10 @@ export default function RegisterPage() {
         {/* Divider */}
         <div className="relative mt-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
+            <div className="w-full border-t border-gray-300 dark:border-neutral-500" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="bg-gray-100 px-2 text-gray-500">
+            <span className="bg-white px-2 text-gray-500 dark:bg-[#121212] dark:text-gray-300">
               Or continue with email
             </span>
           </div>
@@ -134,7 +138,7 @@ export default function RegisterPage() {
               <div className="text-sm text-red-700">{error}</div>
             </div>
           )}
-          <div className="-space-y-px divide-y divide-gray-200 rounded-md shadow-sm">
+          <div className="-space-y-px divide-y-2 divide-gray-200 rounded-md shadow-sm dark:divide-neutral-500">
             <div>
               <label htmlFor="username" className="sr-only">
                 Username
@@ -147,7 +151,7 @@ export default function RegisterPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="relative block w-full appearance-none rounded-none rounded-t-md border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-lime-500 focus:ring-lime-500 focus:outline-none sm:text-sm"
+                className="relative block w-full appearance-none rounded-none rounded-t-md border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-lime-500 focus:outline-none focus:ring-lime-500 sm:text-sm dark:placeholder-gray-300"
                 placeholder="Username (min 3 characters)"
               />
             </div>
@@ -163,7 +167,7 @@ export default function RegisterPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="relative block w-full appearance-none rounded-none border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-lime-500 focus:ring-lime-500 focus:outline-none sm:text-sm"
+                className="relative block w-full appearance-none rounded-none border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-lime-500 focus:outline-none focus:ring-lime-500 sm:text-sm dark:placeholder-gray-300"
                 placeholder="Email address"
               />
             </div>
@@ -179,7 +183,7 @@ export default function RegisterPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="relative block w-full appearance-none rounded-none border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-lime-500 focus:ring-lime-500 focus:outline-none sm:text-sm"
+                className="relative block w-full appearance-none rounded-none border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-lime-500 focus:outline-none focus:ring-lime-500 sm:text-sm dark:placeholder-gray-300"
                 placeholder="Password (min 6 characters)"
               />
             </div>
@@ -195,7 +199,7 @@ export default function RegisterPage() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="relative block w-full appearance-none rounded-none rounded-b-md border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-lime-500 focus:ring-lime-500 focus:outline-none sm:text-sm"
+                className="relative block w-full appearance-none rounded-none rounded-b-md border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-lime-500 focus:outline-none focus:ring-lime-500 sm:text-sm dark:placeholder-gray-300"
                 placeholder="Confirm password"
               />
             </div>
@@ -205,7 +209,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative flex w-full cursor-pointer justify-center rounded-md border-transparent bg-lime-600 px-4 py-2 text-sm font-medium text-white hover:bg-lime-700 focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="group relative flex w-full cursor-pointer justify-center rounded-md border-transparent bg-lime-600 px-4 py-2 text-sm font-medium text-white hover:bg-lime-700 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? 'Creating account...' : 'Create account'}
             </button>

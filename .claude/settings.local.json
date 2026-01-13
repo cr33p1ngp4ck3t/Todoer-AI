@@ -34,7 +34,24 @@
       "Bash(xargs:*)",
       "Bash(Error\" -Context 3 | head -50\")",
       "Bash(npm run build:*)",
-      "Bash(.venv/Scripts/python.exe -m pytest:*)"
+      "Bash(.venv/Scripts/python.exe -m pytest:*)",
+      "Bash(test:*)",
+      "Bash(docker build:*)",
+      "Bash(minikube image load:*)",
+      "Bash(kubectl rollout:*)",
+      "Bash(minikube status:*)",
+      "Bash(minikube start:*)",
+      "Bash(kubectl get:*)",
+      "Bash(kubectl describe:*)",
+      "Bash(kubectl logs:*)",
+      "Bash(kubectl exec:*)",
+      "Bash(kubectl delete:*)",
+      "Bash(kubectl wait:*)",
+      "Bash(kubectl apply:*)",
+      "Bash(kubectl scale:*)",
+      "Bash(minikube unpause:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

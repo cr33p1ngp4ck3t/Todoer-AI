@@ -1,0 +1,17 @@
+apiVersion: v2
+name: todo-app
+description: A Helm chart for Todo Application with Kubernetes and Dapr integration
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - todo
+  - kubernetes
+  - dapr
+  - kafka
+  - event-driven
+home: https://github.com/AgenticAI/todo-list
+sources:
+  - https://github.com/AgenticAI/todo-list
+maintainers:
+  - name: AgenticAI Team

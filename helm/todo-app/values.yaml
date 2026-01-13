@@ -1,0 +1,97 @@
+replicaCount: 3
+
+image:
+  backend:
+    repository: your-registry/todo-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  frontend:
+    repository: your-registry/todo-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  backend:
+    port: 8000
+  frontend:
+    port: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  host: todo.example.com
+  tls: true
+  certIssuer: letsencrypt-prod
+
+database:
+  type: managed
+  host: "your-managed-db-host.com"
+  port: 5432
+  name: todo_db
+  user: todo
+  passwordSecretName: db-password
+  # For local postgres-operator:
+  # type: postgres-operator
+  # operator version
+
+kafka:
+  enabled: true
+  replicas: 3
+  storage: 10Gi
+  brokers: "kafka:9092"
+
+dapr:
+  enabled: true
+  version: "1.13.0"
+  pubsubName: "todo-pubsub"
+  stateStoreName: "todo-statestore"
+
+resources:
+  backend:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  frontend:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 250m
+
+autoscaling:
+  enabled: true
+  backend:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  frontend:
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+cloud:
+  provider: digitalocean
+  region: nyc3
+  nodeSize: s-2vcpu-4gb
+  nodeCount: 3
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    retention: 15d
+  grafana:
+    enabled: true
+    adminPassword: admin
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
