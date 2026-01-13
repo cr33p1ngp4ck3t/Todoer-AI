@@ -4,7 +4,6 @@ metadata:
   name: todo-app-ingress
   namespace: todo-app
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   ingressClassName: nginx
@@ -12,13 +11,6 @@ spec:
   - host: todo.local
     http:
       paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
-            port:
-              number: 3000
       - path: /api
         pathType: Prefix
         backend:
@@ -26,3 +18,10 @@ spec:
             name: backend
             port:
               number: 8000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000
