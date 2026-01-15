@@ -15,7 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { DialogTitle, DialogDescription } from './ui/dialog'
 import { Badge } from './ui/badge'
-import { cn } from '@/lib/utils'
+import { cn } from '../lib/utils'
 
 export interface TaskCreateProps {
   onCreate: (task: {

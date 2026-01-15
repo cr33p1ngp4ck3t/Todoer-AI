@@ -51,7 +51,8 @@
       "Bash(kubectl scale:*)",
       "Bash(minikube unpause:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "WebFetch(domain:docs.digitalocean.com)"
     ]
   }
 }

@@ -20,7 +20,7 @@ import {
 } from './ui/select'
 import { Badge } from './ui/badge'
 import { X, Plus, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '../lib/utils'
 
 interface EditTaskModalProps {
   task: Task
@@ -123,7 +123,7 @@ export default function EditTaskModal({
               placeholder="Add more details (optional)..."
               rows={3}
               className={cn(
-                'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input min-w-full rounded-md bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700',
+                'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input shadow-xs min-w-full rounded-md bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700',
                 'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]'
               )}
             />
