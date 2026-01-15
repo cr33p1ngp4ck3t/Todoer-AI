@@ -20,7 +20,7 @@ import {
 } from './ui/select'
 import { Badge } from './ui/badge'
 import { X, Plus, Loader2 } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { cn } from '@/lib/utils'
 
 interface EditTaskModalProps {
   task: Task
