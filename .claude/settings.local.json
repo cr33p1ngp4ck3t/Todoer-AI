@@ -54,5 +54,6 @@
       "Bash(git commit:*)",
       "WebFetch(domain:docs.digitalocean.com)"
     ]
-  }
+  },
+  "outputStyle": "default"
 }

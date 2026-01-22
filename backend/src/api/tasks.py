@@ -1,5 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -16,6 +17,7 @@ class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
     priority: str = "medium"
+    due_date: Optional[datetime] = None
     tags: Optional[List[str]] = None
 
 class TaskUpdate(BaseModel):
@@ -23,6 +25,7 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
+    due_date: Optional[datetime] = None
     tags: Optional[List[str]] = None
 
 class TaskResponse(BaseModel):
@@ -32,6 +35,7 @@ class TaskResponse(BaseModel):
     description: Optional[str] = None
     status: str
     priority: str
+    due_date: Optional[str] = None
     tags: Optional[List[str]] = None
     created_at: str
     updated_at: str
@@ -76,6 +80,7 @@ async def list_tasks(
             description=t.description,
             status=t.status,
             priority=t.priority,
+            due_date=t.due_date.isoformat() if t.due_date else None,
             tags=[tag.name for tag in t.tags] if t.tags else [],
             created_at=t.created_at.isoformat(),
             updated_at=t.updated_at.isoformat(),
@@ -98,6 +103,7 @@ async def create_task(
         title=task.title,
         description=task.description,
         priority=task.priority,
+        due_date=task.due_date,
         tags=task.tags,
     )
     return TaskResponse(
@@ -107,6 +113,7 @@ async def create_task(
         description=created.description,
         status=created.status,
         priority=created.priority,
+        due_date=created.due_date.isoformat() if created.due_date else None,
         tags=[tag.name for tag in created.tags] if created.tags else [],
         created_at=created.created_at.isoformat(),
         updated_at=created.updated_at.isoformat(),
@@ -132,6 +139,7 @@ async def get_task(
         description=task.description,
         status=task.status,
         priority=task.priority,
+        due_date=task.due_date.isoformat() if task.due_date else None,
         tags=[tag.name for tag in task.tags] if task.tags else [],
         created_at=task.created_at.isoformat(),
         updated_at=task.updated_at.isoformat(),
@@ -155,6 +163,7 @@ async def update_task(
         description=task_update.description,
         status=task_update.status,
         priority=task_update.priority,
+        due_date=task_update.due_date,
         tags=task_update.tags,
     )
     if not updated:
@@ -166,6 +175,7 @@ async def update_task(
         description=updated.description,
         status=updated.status,
         priority=updated.priority,
+        due_date=updated.due_date.isoformat() if updated.due_date else None,
         tags=[tag.name for tag in updated.tags] if updated.tags else [],
         created_at=updated.created_at.isoformat(),
         updated_at=updated.updated_at.isoformat(),

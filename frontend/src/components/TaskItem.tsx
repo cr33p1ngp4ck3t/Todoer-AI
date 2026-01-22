@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Task } from '../services/api'
-import { Check, Edit, Trash2, Loader2 } from 'lucide-react'
+import { Check, Edit, Trash2, Loader2, Calendar } from 'lucide-react'
 import { Badge } from './ui/badge'
 
 interface TaskItemProps {
@@ -21,6 +21,30 @@ export default function TaskItem({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isToggling, setIsToggling] = useState(false)
   const isCompleted = task.status === 'completed'
+
+  // Check if task is overdue
+  const isOverdue = task.due_date && !isCompleted && new Date(task.due_date) < new Date()
+  const isDueSoon = task.due_date && !isCompleted && !isOverdue &&
+    new Date(task.due_date) < new Date(Date.now() + 24 * 60 * 60 * 1000) // within 24 hours
+
+  // Format due date for display
+  const formatDueDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const isToday = date.toDateString() === now.toDateString()
+    const isTomorrow = date.toDateString() === tomorrow.toDateString()
+
+    if (isToday) {
+      return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+    }
+    if (isTomorrow) {
+      return `Tomorrow at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+    }
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
 
   const handleDelete = async () => {
     if (isDeleting) return
@@ -51,7 +75,7 @@ export default function TaskItem({
 
   return (
     <li
-      className={`rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-all dark:border-neutral-700 dark:bg-neutral-800/80 ${
+      className={`rounded-lg border border-border bg-card p-4 shadow-sm transition-all ${
         isCompleted ? 'opacity-60' : 'hover:shadow-md'
       }`}
     >
@@ -63,8 +87,8 @@ export default function TaskItem({
           aria-label={`Mark task ${task.title} as ${isCompleted ? 'pending' : 'completed'}`}
           className={`flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border-2 transition-colors ${
             isCompleted
-              ? 'bg-lime-700 text-white dark:border-neutral-500 dark:bg-lime-600'
-              : 'border-gray-300 dark:border-neutral-700 dark:hover:border-neutral-500'
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-border hover:border-muted-foreground'
           } ${isToggling ? 'opacity-50' : ''}`}
         >
           {isToggling ? (
@@ -77,15 +101,31 @@ export default function TaskItem({
         {/* Task Content */}
         <div className="min-w-0 flex-1">
           <div
-            className={`font-medium ${isCompleted ? 'text-gray-400 line-through dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}
+            className={`font-medium ${isCompleted ? 'text-text-muted line-through' : 'text-foreground'}`}
           >
             {task.title}
           </div>
 
           {task.description && (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-text-secondary">
               {task.description}
             </p>
+          )}
+
+          {/* Due Date */}
+          {task.due_date && (
+            <div
+              className={`mt-2 flex items-center gap-1 text-xs ${
+                isOverdue
+                  ? 'text-destructive font-medium'
+                  : isDueSoon
+                    ? 'text-warning font-medium'
+                    : 'text-text-muted'
+              }`}
+            >
+              <Calendar className="h-3 w-3" />
+              <span>{isOverdue ? 'Overdue: ' : ''}{formatDueDate(task.due_date)}</span>
+            </div>
           )}
 
           {/* Tags */}
@@ -95,7 +135,7 @@ export default function TaskItem({
                 <Badge
                   key={tag}
                   variant="outline"
-                  className="border border-gray-200 text-xs dark:border-neutral-700"
+                  className="border border-border text-xs"
                 >
                   {tag}
                 </Badge>
@@ -109,10 +149,10 @@ export default function TaskItem({
           variant={priorityBadgeVariant}
           className={`capitalize ${
             priorityBadgeVariant === 'default'
-              ? 'bg-lime-500'
+              ? 'bg-priority-medium'
               : priorityBadgeVariant === 'secondary'
-                ? 'bg-lime-400'
-                : 'bg-lime-700'
+                ? 'bg-priority-low'
+                : 'bg-priority-high'
           }`}
         >
           {task.priority}
@@ -123,7 +163,7 @@ export default function TaskItem({
           <button
             onClick={() => onEdit(task.id)}
             disabled={isDeleting || isToggling}
-            className="rounded p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-neutral-700 dark:hover:text-gray-100"
+            className="rounded p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-50"
             aria-label={`Edit task ${task.title}`}
           >
             <Edit className="h-4 w-4" />
@@ -131,7 +171,7 @@ export default function TaskItem({
           <button
             onClick={handleDelete}
             disabled={isDeleting || isToggling}
-            className="rounded p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            className="rounded p-2 text-text-secondary transition-colors hover:bg-destructive-light hover:text-destructive disabled:opacity-50"
             aria-label={`Delete task ${task.title}`}
           >
             {isDeleting ? (

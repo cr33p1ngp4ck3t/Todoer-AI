@@ -22,6 +22,7 @@ export interface TaskCreateProps {
     title: string
     description?: string
     priority: 'low' | 'medium' | 'high'
+    due_date?: string
     tags?: string[]
   }) => void
   creating?: boolean
@@ -38,6 +39,7 @@ export default function TaskForm({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
+  const [dueDate, setDueDate] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
 
@@ -73,6 +75,7 @@ export default function TaskForm({
       title: title.trim(),
       description: description.trim() || undefined,
       priority,
+      due_date: dueDate || undefined,
       tags: tags.length > 0 ? tags : undefined,
     })
 
@@ -80,6 +83,7 @@ export default function TaskForm({
     setTitle('')
     setDescription('')
     setPriority('medium')
+    setDueDate('')
     setTags([])
     setTagInput('')
     setSmartText('')
@@ -108,15 +112,13 @@ export default function TaskForm({
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">Create New Task</CardTitle>
-            <div className="flex rounded-md bg-gray-100 p-1 dark:bg-neutral-700">
+            <div className="flex gap-1 rounded-md bg-secondary p-1">
               <Button
                 size="sm"
                 variant={mode === 'ai' ? 'default' : 'ghost'}
                 onClick={() => setMode('ai')}
                 className={cn(
-                  mode === 'ai'
-                    ? 'bg-gray-50 shadow-sm dark:bg-neutral-900/60'
-                    : '',
+                  mode === 'ai' ? 'bg-card/80 shadow-sm' : '',
                   'cursor-pointer'
                 )}
               >
@@ -128,9 +130,7 @@ export default function TaskForm({
                 variant={mode === 'manual' ? 'default' : 'ghost'}
                 onClick={() => setMode('manual')}
                 className={cn(
-                  mode === 'manual'
-                    ? 'bg-gray-50 shadow-sm dark:bg-neutral-900/60'
-                    : '',
+                  mode === 'manual' ? 'bg-card/80 shadow-sm' : '',
                   'cursor-pointer'
                 )}
               >
@@ -150,19 +150,19 @@ export default function TaskForm({
                   placeholder="Example: Buy milk tomorrow high priority with #groceries tag..."
                   rows={3}
                   className={cn(
-                    'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 shadow-xs min-w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+                    'shadow-xs min-w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
                     'focus-visible:ring-[3px]',
-                    'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:border-neutral-700'
+                    'aria-invalid:ring-destructive/20 aria-invalid:border-destructive'
                   )}
                   required
                 />
-                <p className="text-muted-foreground mt-2 text-xs italic">
+                <p className="mt-2 text-xs italic text-muted-foreground">
                   Wait, i'll extract the details for you to review.
                 </p>
               </div>
               <Button
                 type="submit"
-                className="w-full bg-gray-200 dark:bg-neutral-700"
+                className="w-full bg-secondary"
                 disabled={!smartText.trim() || isParsing}
               >
                 {isParsing ? (
@@ -195,7 +195,7 @@ export default function TaskForm({
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="What needs to be done?"
                   required
-                  className="border border-gray-200 dark:border-neutral-700"
+                  className="border border-border"
                 />
               </div>
 
@@ -214,8 +214,8 @@ export default function TaskForm({
                   placeholder="Add more details (optional)..."
                   rows={2}
                   className={cn(
-                    'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input shadow-xs min-w-full rounded-md bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
-                    'focus-visible:border-ring focus-visible:ring-ring/50 border border-gray-200 focus-visible:ring-[3px] dark:border-neutral-700'
+                    'shadow-xs min-w-full rounded-md bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+                    'border border-border focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
                   )}
                 />
               </div>
@@ -235,7 +235,7 @@ export default function TaskForm({
                       setPriority(v as 'low' | 'medium' | 'high')
                     }
                   >
-                    <SelectTrigger className="w-full border border-gray-200 dark:border-neutral-700">
+                    <SelectTrigger className="w-full border border-border">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -246,22 +246,37 @@ export default function TaskForm({
                   </Select>
                 </div>
 
-                {/* Tags Input Preview */}
+                {/* Due Date Picker */}
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Tags</label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={(e) =>
-                        e.key === 'Enter' && (e.preventDefault(), addTag())
-                      }
-                      placeholder="Add tag..."
-                      className="flex-1 border border-gray-200 dark:border-neutral-700"
-                    />
-                  </div>
+                  <label
+                    htmlFor="due_date"
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Due Date
+                  </label>
+                  <Input
+                    id="due_date"
+                    type="datetime-local"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="border border-border"
+                  />
                 </div>
+              </div>
+
+              <div className="mb-4">
+                {/* Tags Input */}
+                <label className="mb-1 block text-sm font-medium">Tags</label>
+                <Input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === 'Enter' && (e.preventDefault(), addTag())
+                  }
+                  placeholder="Add tag and press Enter..."
+                  className="border border-border"
+                />
               </div>
 
               {/* Tags Display */}
@@ -285,7 +300,7 @@ export default function TaskForm({
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  className="flex-1 border border-neutral-200 dark:border-neutral-700"
+                  className="flex-1 border border-border"
                   type="button"
                   onClick={() => {
                     setMode('ai')
@@ -296,7 +311,7 @@ export default function TaskForm({
                   Back to AI
                 </Button>
                 <Button
-                  className="flex-1 bg-neutral-500"
+                  className="flex-1 bg-secondary"
                   type="submit"
                   disabled={!title.trim() || creating}
                 >

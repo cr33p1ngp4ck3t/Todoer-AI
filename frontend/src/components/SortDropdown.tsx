@@ -16,11 +16,11 @@ interface SortDropdownProps {
 export default function SortDropdown({ sortBy, onChange }: SortDropdownProps) {
   return (
     <div className="relative min-w-48">
-      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label className="mb-1 block text-sm font-medium text-foreground">
         Sort by
       </label>
       <Select value={sortBy} onValueChange={onChange}>
-        <SelectTrigger className="w-full border border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-800/80">
+        <SelectTrigger className="w-full border border-border bg-card">
           <SelectValue placeholder="Sort by..." />
         </SelectTrigger>
         <SelectContent>

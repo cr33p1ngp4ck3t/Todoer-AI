@@ -4,47 +4,179 @@
 
 @layer base {
   :root {
+    /* Base Colors */
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
+
+    /* Card/Surface Colors */
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
+
+    /* Popover/Dropdown */
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
+
+    /* Primary Brand (Lime) */
+    --primary: 84 81% 44%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 84 85% 43%;
+    --primary-dark: 85 78% 27%;
+
+    /* Secondary/Neutral */
+    --secondary: 40, 17%, 84%;
     --secondary-foreground: 0 0% 9%;
+
+    /* Muted Elements */
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
+
+    /* Accent */
     --accent: 0 0% 96.1%;
     --accent-foreground: 0 0% 9%;
+
+    /* Destructive/Error */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --destructive-light: 0 93% 94%;
+
+    /* Success */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    /* Border/Input */
+    --border: 220 13% 91%;
+    --border-light: 220 14% 96%;
+    --input: 220 13% 91%;
+
+    /* Focus Ring */
+    --ring: 84 81% 44%;
+
+    /* Radius */
     --radius: 0.5rem;
+
+    /* Gradient Backgrounds */
+    --gradient-from: 251 33% 99%;
+    --gradient-to: 206 27% 94%;
+
+    /* Text Hierarchy */
+    --text-primary: 0 0% 9%;
+    --text-secondary: 220 9% 46%;
+    --text-muted: 220 9% 40%;
+    --text-placeholder: 220 9% 58%;
+
+    /* Surface Variants */
+    --surface-elevated: 0 0% 100%;
+    --surface-sunken: 220 14% 96%;
+    --surface-hover: 220 14% 96%;
+
+    /* Priority Badge Colors */
+    --priority-high: 85 78% 27%;
+    --priority-medium: 84 85% 43%;
+    --priority-low: 84 85% 67%;
+
+    /* Chart Colors */
+    --chart-primary: 84 85% 43%;
+    --chart-secondary: 0 0% 32%;
+    --chart-axis: 220 9% 46%;
+    --chart-grid: 220 13% 91%;
+
+    /* Interactive States */
+    --hover-overlay: 0 0% 0% / 0.04;
+    --active-overlay: 0 0% 0% / 0.08;
+    --focus-ring-color: 84 81% 44%;
+
+    /* Divider/Separator */
+    --divider: 220 13% 91%;
   }
 
   .dark {
-    --background: 0 0% 3.9%;
+    /* Base Colors */
+    --background: 0 0% 7%;
     --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
+
+    /* Card/Surface Colors */
+    --card: 0 0% 12%;
     --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
+
+    /* Popover/Dropdown */
+    --popover: 0 0% 15%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
+
+    /* Primary Brand (Lime) - stays same for brand consistency */
+    --primary: 84 81% 44%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 84 85% 43%;
+    --primary-dark: 85 78% 27%;
+
+    /* Secondary/Neutral */
+    --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
+
+    /* Muted Elements */
+    --muted: 0 0% 15%;
     --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
+
+    /* Accent */
+    --accent: 0 0% 15%;
     --accent-foreground: 0 0% 98%;
+
+    /* Destructive/Error */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
+    --destructive-light: 0 50% 15%;
+
+    /* Success */
+    --success: 142 71% 55%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    /* Border/Input */
+    --border: 0 0% 20%;
+    --border-light: 0 0% 15%;
+    --input: 0 0% 20%;
+
+    /* Focus Ring */
     --ring: 0 0% 83.2%;
+
+    /* Gradient Backgrounds */
+    --gradient-from: 0 1% 21%;
+    --gradient-to: 240 6% 15%;
+
+    /* Text Hierarchy */
+    --text-primary: 0 0% 98%;
+    --text-secondary: 0 0% 63.9%;
+    --text-muted: 0 0% 50%;
+    --text-placeholder: 0 0% 45%;
+
+    /* Surface Variants */
+    --surface-elevated: 0 0% 15%;
+    --surface-sunken: 0 0% 7%;
+    --surface-hover: 0 0% 18%;
+
+    /* Priority Badge Colors */
+    --priority-high: 0 0% 70%;
+    --priority-medium: 0 0% 50%;
+    --priority-low: 0 0% 35%;
+
+    /* Chart Colors */
+    --chart-primary: 84 85% 43%;
+    --chart-secondary: 0 0% 32%;
+    --chart-axis: 0 0% 50%;
+    --chart-grid: 0 0% 20%;
+
+    /* Interactive States */
+    --hover-overlay: 0 0% 100% / 0.04;
+    --active-overlay: 0 0% 100% / 0.08;
+    --focus-ring-color: 84 81% 44%;
+
+    /* Divider/Separator */
+    --divider: 0 0% 20%;
   }
 }

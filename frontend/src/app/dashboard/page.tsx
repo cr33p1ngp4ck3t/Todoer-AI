@@ -49,10 +49,10 @@ export default function Dashboard() {
   // Don't render anything while checking auth
   if (authLoading) {
     return (
-      <div className="bg-linear-120 flex min-h-screen items-center justify-center from-[#fdfbfb] to-[#ebedee] dark:bg-neutral-800/80">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-page">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 dark:border-neutral-700"></div>
-          <p className="mt-4 text-gray-500 dark:text-gray-400">Loading...</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-border"></div>
+          <p className="mt-4 text-text-secondary">Loading...</p>
         </div>
       </div>
     )
@@ -160,16 +160,12 @@ export default function Dashboard() {
   const completedTasks = tasks.filter((t) => t.status === 'completed')
 
   return (
-    <div className="bg-linear-120 min-h-screen from-[#fbfcfd] to-[#eaf0f3] px-4 py-8 dark:from-[#353434] dark:to-[#252529]">
+    <div className="min-h-screen bg-gradient-page px-4 py-8">
       <div className="mx-auto max-w-4xl">
         <header className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              My Tasks
-            </h1>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {user?.email}
-            </p>
+            <h1 className="text-3xl font-bold text-foreground">My Tasks</h1>
+            <p className="mt-1 text-sm text-text-secondary">{user?.email}</p>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -185,7 +181,7 @@ export default function Dashboard() {
             />
             <Button
               onClick={() => setShowForm(true)}
-              className="bg-neutral-100 hover:bg-neutral-300 dark:bg-neutral-500 dark:hover:bg-neutral-700"
+              className="bg-secondary"
               disabled={creating}
             >
               + New Task
@@ -193,7 +189,7 @@ export default function Dashboard() {
             <Button
               variant="outline"
               onClick={handleLogout}
-              className="border border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+              className="border border-border bg-card"
             >
               Logout
             </Button>
@@ -209,7 +205,7 @@ export default function Dashboard() {
         </div>
 
         {/* Search, Filter, Sort Controls */}
-        <div className="mb-6 space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-800/80">
+        <div className="mb-6 space-y-4 rounded-lg border border-border bg-card p-4 shadow-sm">
           <SearchBar
             value={searchQuery}
             onChange={setSearchQuery}
@@ -248,18 +244,16 @@ export default function Dashboard() {
         </Dialog>
 
         {loading ? (
-          <div className="py-8 text-center text-gray-500 dark:text-gray-400">
-            Loading...
-          </div>
+          <div className="py-8 text-center text-text-secondary">Loading...</div>
         ) : (
           <>
             {/* Pending Tasks */}
             {pendingTasks.length > 0 && (
               <section className="mb-8">
-                <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+                <h2 className="mb-4 text-lg font-semibold text-foreground">
                   Pending ({pendingTasks.length})
                 </h2>
-                <ul className="flex flex-col gap-4 divide-y divide-gray-100 rounded-lg dark:divide-gray-100">
+                <ul className="flex flex-col gap-4 divide-y divide-divider rounded-lg">
                   {pendingTasks.map((task) => (
                     <TaskItem
                       key={task.id}
@@ -276,10 +270,10 @@ export default function Dashboard() {
             {/* Completed Tasks */}
             {completedTasks.length > 0 && (
               <section>
-                <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+                <h2 className="mb-4 text-lg font-semibold text-foreground">
                   Completed ({completedTasks.length})
                 </h2>
-                <ul className="flex flex-col gap-4 divide-y divide-gray-100 rounded-lg dark:divide-gray-100">
+                <ul className="flex flex-col gap-4 divide-y divide-divider rounded-lg">
                   {completedTasks.map((task) => (
                     <TaskItem
                       key={task.id}
@@ -295,11 +289,9 @@ export default function Dashboard() {
 
             {/* Empty State */}
             {tasks.length === 0 && (
-              <div className="rounded-lg border border-gray-200 bg-white py-16 text-center shadow-sm dark:border-neutral-700 dark:bg-neutral-800/80">
-                <p className="text-lg text-gray-500 dark:text-gray-400">
-                  No tasks found
-                </p>
-                <p className="mt-2 text-gray-500/60 dark:text-gray-400/60">
+              <div className="rounded-lg border border-border bg-card py-16 text-center shadow-sm">
+                <p className="text-lg text-text-secondary">No tasks found</p>
+                <p className="mt-2 text-text-muted">
                   {searchQuery ||
                   statusFilter !== 'all' ||
                   priorityFilter !== 'all'
