@@ -46,18 +46,18 @@ export default function ProductivityChart({ tasks }: ProductivityChartProps) {
   const chartConfig = {
     completed: {
       label: 'Completed Tasks',
-      color: '#84cc16', // lime-500
+      color: 'hsl(var(--chart-primary))',
     },
   } satisfies ChartConfig
 
   return (
-    <Card className="bg-white dark:bg-neutral-800/80">
+    <Card className="bg-card">
       <CardHeader>
         <CardTitle className="text-lg">Last 7 Days</CardTitle>
       </CardHeader>
       <CardContent>
         {totalCompleted === 0 ? (
-          <div className="flex h-48 items-center justify-center text-sm text-gray-500">
+          <div className="flex h-48 items-center justify-center text-sm text-text-secondary">
             No completed tasks yet
           </div>
         ) : (
@@ -68,21 +68,21 @@ export default function ProductivityChart({ tasks }: ProductivityChartProps) {
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                tick={{ fill: '#6b7280', fontSize: 12 }}
+                tick={{ fill: 'hsl(var(--chart-axis))', fontSize: 12 }}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
                 allowDecimals={false}
-                tick={{ fill: '#6b7280', fontSize: 12 }}
+                tick={{ fill: 'hsl(var(--chart-axis))', fontSize: 12 }}
               />
               <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
               <Bar dataKey="completed" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.isToday ? '#84cc16' : '#525252'}
+                    fill={entry.isToday ? 'hsl(var(--chart-primary))' : 'hsl(var(--chart-secondary))'}
                   />
                 ))}
               </Bar>

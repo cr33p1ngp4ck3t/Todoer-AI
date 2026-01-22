@@ -23,6 +23,7 @@ class Task(SQLModel, table=True):
     description: Optional[str] = Field(default=None, max_length=1000)
     status: str = Field(default="pending", index=True)  # pending, completed
     priority: str = Field(default="medium")  # low, medium, high
+    due_date: Optional[datetime] = Field(default=None, index=True)  # optional deadline
     created_at: datetime = Field(default_factory=utcnow, index=True)
     updated_at: datetime = Field(default_factory=utcnow)
 

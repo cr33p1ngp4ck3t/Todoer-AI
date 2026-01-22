@@ -7,6 +7,7 @@ export interface Task {
   description?: string
   status: 'pending' | 'completed'
   priority: 'low' | 'medium' | 'high'
+  due_date?: string
   tags?: string[]
   created_at: string
   updated_at: string
@@ -16,6 +17,7 @@ export interface TaskCreate {
   title: string
   description?: string
   priority?: 'low' | 'medium' | 'high'
+  due_date?: string
   tags?: string[]
 }
 
@@ -24,6 +26,7 @@ export interface TaskUpdate {
   description?: string
   status?: 'pending' | 'completed'
   priority?: 'low' | 'medium' | 'high'
+  due_date?: string
   tags?: string[]
 }
 

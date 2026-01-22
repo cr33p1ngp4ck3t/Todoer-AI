@@ -75,6 +75,7 @@ class TaskService:
         title: str,
         description: Optional[str] = None,
         priority: str = "medium",
+        due_date: Optional[datetime] = None,
         tags: Optional[List[str]] = None,
     ) -> Task:
         """Create a new task for current user."""
@@ -87,6 +88,7 @@ class TaskService:
             description=description.strip() if description else None,
             priority=priority,
             status="pending",
+            due_date=due_date,
         )
         session.add(task)
         session.commit()
@@ -111,6 +113,7 @@ class TaskService:
         description: Optional[str] = None,
         status: Optional[str] = None,
         priority: Optional[str] = None,
+        due_date: Optional[datetime] = None,
         tags: Optional[List[str]] = None,
     ) -> Optional[Task]:
         """Update an existing task (user-scoped, last-write-wins)."""
@@ -126,6 +129,8 @@ class TaskService:
             task.status = status
         if priority is not None and priority in VALID_PRIORITIES:
             task.priority = priority
+        if due_date is not None:
+            task.due_date = due_date
 
         task.updated_at = datetime.utcnow()
 

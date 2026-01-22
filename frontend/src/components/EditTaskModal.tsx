@@ -38,6 +38,9 @@ export default function EditTaskModal({
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(
     task.priority as 'low' | 'medium' | 'high'
   )
+  const [dueDate, setDueDate] = useState(
+    task.due_date ? task.due_date.slice(0, 16) : ''
+  )
   const [tags, setTags] = useState<string[]>(task.tags || [])
   const [tagInput, setTagInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -52,6 +55,7 @@ export default function EditTaskModal({
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
+        due_date: dueDate || undefined,
         tags: tags.length > 0 ? tags : undefined,
       })
     } finally {
@@ -129,27 +133,44 @@ export default function EditTaskModal({
             />
           </div>
 
-          {/* Priority Selector */}
-          <div className="mb-4">
-            <label
-              htmlFor="edit-priority"
-              className="mb-1 block text-sm font-medium"
-            >
-              Priority
-            </label>
-            <Select
-              value={priority}
-              onValueChange={(v) => setPriority(v as 'low' | 'medium' | 'high')}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue className="" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Priority and Due Date */}
+          <div className="mb-4 grid grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="edit-priority"
+                className="mb-1 block text-sm font-medium"
+              >
+                Priority
+              </label>
+              <Select
+                value={priority}
+                onValueChange={(v) => setPriority(v as 'low' | 'medium' | 'high')}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue className="" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="edit-due-date"
+                className="mb-1 block text-sm font-medium"
+              >
+                Due Date
+              </label>
+              <Input
+                id="edit-due-date"
+                type="datetime-local"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            </div>
           </div>
 
           {/* Tags Input */}

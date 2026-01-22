@@ -25,11 +25,11 @@ export default function FilterControls({
     <div className="flex flex-wrap gap-4">
       {/* Status Dropdown */}
       <div className="min-w-40 flex-1">
-        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label className="mb-1 block text-sm font-medium text-foreground">
           Status
         </label>
         <Select value={statusFilter} onValueChange={onStatusChange}>
-          <SelectTrigger className="w-full border border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-800/80">
+          <SelectTrigger className="w-full border border-border bg-card">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>
@@ -42,11 +42,11 @@ export default function FilterControls({
 
       {/* Priority Dropdown */}
       <div className="min-w-40 flex-1">
-        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label className="mb-1 block text-sm font-medium text-foreground">
           Priority
         </label>
         <Select value={priorityFilter} onValueChange={onPriorityChange}>
-          <SelectTrigger className="w-full border border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-800/80">
+          <SelectTrigger className="w-full border border-border bg-card">
             <SelectValue placeholder="All priorities" />
           </SelectTrigger>
           <SelectContent>

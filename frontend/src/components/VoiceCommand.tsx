@@ -19,7 +19,10 @@ export default function VoiceCommand({
   const recognitionRef = useRef<any | null>(null)
 
   const startListening = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    if (
+      !('webkitSpeechRecognition' in window) &&
+      !('SpeechRecognition' in window)
+    ) {
       toast.error('Voice commands are not supported in your browser')
       return
     }
@@ -61,11 +64,19 @@ export default function VoiceCommand({
     recognitionRef.current.onerror = (event: any) => {
       // Handle network errors gracefully
       if (event.error === 'network') {
-        console.warn('Speech recognition network error - check internet connection')
-        toast.error('No internet connection. Voice commands require internet access.')
+        console.warn(
+          'Speech recognition network error - check internet connection'
+        )
+        toast.error(
+          'No internet connection. Voice commands require internet access.'
+        )
       } else if (event.error === 'not-allowed') {
-        console.warn('Speech recognition blocked - microphone permission denied')
-        toast.error('Microphone access denied. Please allow microphone access in browser settings.')
+        console.warn(
+          'Speech recognition blocked - microphone permission denied'
+        )
+        toast.error(
+          'Microphone access denied. Please allow microphone access in browser settings.'
+        )
       } else if (event.error === 'no-speech') {
         // No speech detected - not really an error, just user didn't speak
         setIsListening(false)
@@ -93,10 +104,10 @@ export default function VoiceCommand({
       disabled={isProcessing}
       className={`rounded-full p-2 transition-all ${
         isListening
-          ? 'bg-red-500 animate-pulse hover:bg-red-600'
+          ? 'animate-pulse bg-destructive hover:bg-accent/90'
           : isProcessing
-            ? 'bg-gray-300 cursor-not-allowed'
-            : 'bg-neutral-500 hover:bg-neutral-600'
+            ? 'cursor-not-allowed bg-muted'
+            : 'bg-secondary'
       }`}
       aria-label={isListening ? 'Stop listening' : 'Start voice command'}
       title={
@@ -108,11 +119,11 @@ export default function VoiceCommand({
       }
     >
       {isProcessing ? (
-        <Loader2 className="h-5 w-5 animate-spin text-white" />
+        <Loader2 className="h-5 w-5 animate-spin text-foreground" />
       ) : isListening ? (
-        <MicOff className="h-5 w-5 text-white" />
+        <MicOff className="h-5 w-5 text-foreground" />
       ) : (
-        <Mic className="h-5 w-5 text-white" />
+        <Mic className="h-5 w-5 text-foreground" />
       )}
     </button>
   )

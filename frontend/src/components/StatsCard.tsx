@@ -21,23 +21,23 @@ export default function StatsCard({ tasks }: StatsCardProps) {
       .length
 
   return (
-    <Card className="bg-white dark:bg-neutral-800/80">
+    <Card className="bg-card">
       <CardHeader>
         <CardTitle className="text-lg">Task Statistics</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-text-secondary">
               Total Tasks
             </p>
             <p className="text-2xl font-bold">{totalTasks}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-text-secondary">
               Completed
             </p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+            <p className="text-2xl font-bold text-success">
               {completedTasks}
             </p>
           </div>
@@ -46,11 +46,11 @@ export default function StatsCard({ tasks }: StatsCardProps) {
         <div>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-medium">Completion Rate</span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-text-secondary">
               {completionRate.toFixed(0)}%
             </span>
           </div>
-          <Progress value={completionRate} className="h-2 bg-gray-200" />
+          <Progress value={completionRate} className="h-2 bg-secondary" />
         </div>
 
         <div className="space-y-2">
@@ -59,7 +59,7 @@ export default function StatsCard({ tasks }: StatsCardProps) {
             {getPriorityCount('high') > 0 && (
               <Badge
                 variant="destructive"
-                className="bg-neutral-700 text-white dark:bg-neutral-300 dark:text-black"
+                className="bg-priority-high text-primary-foreground"
               >
                 High: {getPriorityCount('high')}
               </Badge>
@@ -67,7 +67,7 @@ export default function StatsCard({ tasks }: StatsCardProps) {
             {getPriorityCount('medium') > 0 && (
               <Badge
                 variant="default"
-                className="bg-neutral-400 dark:bg-neutral-500"
+                className="bg-priority-medium"
               >
                 Medium: {getPriorityCount('medium')}
               </Badge>
@@ -75,7 +75,7 @@ export default function StatsCard({ tasks }: StatsCardProps) {
             {getPriorityCount('low') > 0 && (
               <Badge
                 variant="secondary"
-                className="bg-gray-200 dark:bg-neutral-700"
+                className="bg-priority-low"
               >
                 Low: {getPriorityCount('low')}
               </Badge>
@@ -83,7 +83,7 @@ export default function StatsCard({ tasks }: StatsCardProps) {
             {pendingTasks === 0 && (
               <Badge
                 variant="outline"
-                className="border border-gray-200 dark:border-neutral-700"
+                className="border border-border"
               >
                 No pending tasks
               </Badge>
