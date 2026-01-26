@@ -127,7 +127,7 @@ export default function EditTaskModal({
               placeholder="Add more details (optional)..."
               rows={3}
               className={cn(
-                'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input shadow-xs min-w-full rounded-md bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700',
+                'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground shadow-xs min-w-full rounded-md bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 border border-border',
                 'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]'
               )}
             />
