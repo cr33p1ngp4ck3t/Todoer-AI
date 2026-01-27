@@ -179,6 +179,20 @@ export const api = {
     },
   },
 
+  ping: {
+    keepAlive: async (): Promise<void> => {
+      try {
+        await fetch(`${API_URL}/tasks`, {
+          method: 'HEAD',
+          headers: getHeaders(),
+        })
+      } catch (error) {
+        // Silent fail - don't alert users about ping failures
+        console.debug('Ping failed:', error)
+      }
+    },
+  },
+
   auth: {
     login: async (email: string, password: string): Promise<TokenResponse> => {
       const response = await fetch(`${API_URL}/users/login`, {
