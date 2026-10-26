@@ -42,8 +42,17 @@ MANIFEST
 .env.test.local
 .env.production.local
 
-# Docker
-.dockerignore
+# Local tooling and test artifacts
+.cache/
+.pytest_cache/
+.ruff_cache/
+.coverage*
+coverage.xml
+htmlcov/
+*.db
+playwright-report/
+test-results/
+*.tsbuildinfo
 
 # IDEs
 .vscode/
