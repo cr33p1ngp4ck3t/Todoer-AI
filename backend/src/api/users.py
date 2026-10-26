@@ -1,17 +1,17 @@
-from typing import Optional
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import Session, select
-from src.models.user import User
 from src.api.auth import (
-    verify_password,
-    get_password_hash,
     create_access_token,
-    get_current_user,
     create_refresh_token_in_db,
+    get_current_user,
+    get_password_hash,
+    verify_password,
 )
 from src.lib.database import get_session
-import logging
+from src.models.user import User
 
 logger = logging.getLogger("todo-api")
 
@@ -95,7 +95,7 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during login",
-        )
+        ) from e
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
@@ -105,10 +105,6 @@ async def register(
 ):
     """Register a new user account."""
     try:
-        print(
-            f"DEBUG: Registration request received for {request.username} / {request.email}"
-        )
-
         # Check if email already exists
         existing_email = session.exec(
             select(User).where(User.email == request.email)
@@ -138,18 +134,14 @@ async def register(
             )
 
         # Create new user
-        print(f"DEBUG: Creating user object")
         user = User(
             username=request.username,
             email=request.email,
             hashed_password=get_password_hash(request.password),
             is_active=True,
         )
-        print(f"DEBUG: Adding user to session")
         session.add(user)
-        print(f"DEBUG: Committing session")
         session.commit()
-        print(f"DEBUG: Refreshing user")
         session.refresh(user)
 
         logger.info(f"New user registered: {user.id}")
@@ -165,14 +157,10 @@ async def register(
         raise
     except Exception as e:
         logger.error(f"Registration error: {type(e).__name__}: {e}", exc_info=True)
-        import traceback
-
-        print(f"ERROR: {type(e).__name__}: {e}")
-        print(f"TRACEBACK: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Registration failed: {type(e).__name__}: {str(e)}",
-        )
+            detail="An error occurred during registration",
+        ) from e
 
 
 @router.get("/me", response_model=UserResponse)

@@ -1,23 +1,24 @@
+import logging
+import os
+import secrets
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
+from src.api import chat, conversations, oauth, tasks, token_refresh, users
+from src.lib.database import get_session_sync as get_session
+from src.lib.database import init_db
 from src.lib.logging import JSONFormatter
-from src.lib.database import init_db, get_session_sync as get_session
-from src.api import tasks, users
 from starlette.middleware.sessions import SessionMiddleware
-import logging
-import os
-import traceback
-import secrets
 
 # Configure JSON logging
 logger = logging.getLogger("todo-api")
 handler = logging.StreamHandler()
 handler.setFormatter(JSONFormatter())
-logging.getLogger().addHandler(handler)  # ADD handler instead of replacing
-logging.getLogger().setLevel(logging.DEBUG)  # Enable debug logging
+logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
 
 
 @asynccontextmanager
@@ -27,18 +28,16 @@ async def lifespan(app: FastAPI):
 
     # Validate database connection at startup
     try:
-        from src.lib.database import engine, Session
+        from src.lib.database import Session, engine
 
         with Session(engine) as session:
             session.exec(select(1))
         logger.info("Database connection validated successfully")
-        print("Database connection validated")  # Visible confirmation
     except Exception as e:
         logger.error(
             f"Database connection failed at startup: {type(e).__name__}: {e}",
             exc_info=True,
         )
-        print(f"FATAL: Database connection failed: {e}")
         raise  # Fail fast - don't start server with bad database
 
     yield
@@ -55,11 +54,10 @@ app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler to log all unhandled exceptions."""
-    logger.error(f"Unhandled exception: {exc}")
-    logger.error(f"Traceback: {traceback.format_exc()}")
+    logger.exception("Unhandled request error")
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": str(exc)},
+        content={"detail": "Internal server error"},
     )
 
 
@@ -95,29 +93,24 @@ app.include_router(tasks.router)
 app.include_router(users.router)
 
 # Import and include token refresh router
-from src.api import token_refresh
-
 app.include_router(token_refresh.router)
 
 # Import and include OAuth router
-from src.api import oauth
-
 app.include_router(oauth.router)
 
 # Import and include Chat router
-from src.api import chat
-
 app.include_router(chat.router)
 
 # Import and include Conversations router
-from src.api import conversations
-
 app.include_router(conversations.router)
 
 
 @app.get("/health")
 def health_check():
     """System health check endpoint for K8s probes."""
+    readiness = readiness_check()
+    if isinstance(readiness, JSONResponse):
+        return readiness
     return {"status": "healthy"}
 
 
@@ -128,9 +121,9 @@ def readiness_check():
         with get_session() as session:
             session.exec(select(1))
         return {"status": "ready"}
-    except Exception as e:
-        logger.error(f"Readiness check failed: {e}")
-        return {"status": "not_ready"}
+    except SQLAlchemyError:
+        logger.exception("Readiness check failed")
+        return JSONResponse(status_code=503, content={"status": "not_ready"})
 
 
 @app.get("/health/live")
