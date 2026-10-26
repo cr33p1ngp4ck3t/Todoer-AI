@@ -14,6 +14,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 print(f">>> DATABASE_URL loaded: {DATABASE_URL[:50]}...")  # Debug: show first 50 chars
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
+
 def get_session():
     """Dependency injection for DB sessions.
 
@@ -37,9 +38,12 @@ def get_session():
     except Exception as e:
         print(f">>> EXCEPTION CAUGHT: {type(e).__name__}: {e}")
         import traceback
+
         print(f">>> TRACEBACK:\n{traceback.format_exc()}")
         logger.error(f"Session error: {type(e).__name__}: {e}", exc_info=True)
-        print(f"CRITICAL ERROR in get_session: {type(e).__name__}: {e}")  # Print for visibility
+        print(
+            f"CRITICAL ERROR in get_session: {type(e).__name__}: {e}"
+        )  # Print for visibility
         if session:
             session.rollback()
         raise  # Re-raise to prevent silent failure
@@ -50,11 +54,13 @@ def get_session():
             session.close()
             print(">>> Session closed")
 
+
 @contextmanager
 def get_session_sync():
     """Synchronous context-manager session for health checks and non-async contexts."""
     with Session(engine) as session:
         yield session
+
 
 def init_db():
     """Initialize database tables."""
