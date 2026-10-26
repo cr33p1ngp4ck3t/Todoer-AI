@@ -1,4 +1,5 @@
 """Message model for chat messages within conversations."""
+
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
@@ -20,6 +21,7 @@ class Message(SQLModel, table=True):
     Messages can be from either the user or the AI assistant.
     Tool calls are stored as JSON for traceability of AI actions.
     """
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     conversation_id: UUID = Field(foreign_key="conversation.id", index=True)
     role: str = Field(index=True)  # "user" or "assistant"
