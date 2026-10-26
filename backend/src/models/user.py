@@ -7,9 +7,11 @@ if TYPE_CHECKING:
     from .task import Task
     from .conversation import Conversation
 
+
 def utcnow():
     """Return current UTC datetime."""
     return datetime.now(timezone.utc)
+
 
 class User(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -20,4 +22,6 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
     tasks: List["Task"] = Relationship(back_populates="owner", cascade_delete=True)
-    conversations: List["Conversation"] = Relationship(back_populates="user", cascade_delete=True)
+    conversations: List["Conversation"] = Relationship(
+        back_populates="user", cascade_delete=True
+    )
