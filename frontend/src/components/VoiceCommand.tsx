@@ -10,26 +10,37 @@ interface VoiceCommandProps {
   onTaskCreated?: () => void
 }
 
-export default function VoiceCommand({
-  onCommandExecuted,
-  onTaskCreated,
-}: VoiceCommandProps) {
+interface SpeechRecognition {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onstart: () => void
+  onresult: (event: { results: { transcript: string }[][] }) => void
+  onend: () => void
+  onerror: (event: { error: string }) => void
+  start: () => void
+  stop: () => void
+}
+
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: new () => SpeechRecognition
+  webkitSpeechRecognition?: new () => SpeechRecognition
+}
+
+export default function VoiceCommand({ onCommandExecuted }: VoiceCommandProps) {
   const [isListening, setIsListening] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const recognitionRef = useRef<any | null>(null)
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
 
   const startListening = () => {
-    if (
-      !('webkitSpeechRecognition' in window) &&
-      !('SpeechRecognition' in window)
-    ) {
+    const speechWindow = window as SpeechRecognitionWindow
+    const SpeechRecognition =
+      speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition
+    if (!SpeechRecognition) {
       toast.error('Voice commands are not supported in your browser')
       return
     }
 
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition
     recognitionRef.current = new SpeechRecognition()
     recognitionRef.current.continuous = false
     recognitionRef.current.interimResults = false
@@ -40,7 +51,7 @@ export default function VoiceCommand({
       toast.info('Listening... speak now')
     }
 
-    recognitionRef.current.onresult = async (event: any) => {
+    recognitionRef.current.onresult = async (event) => {
       const transcript = event.results[0][0].transcript
       setIsProcessing(true)
       try {
@@ -61,7 +72,7 @@ export default function VoiceCommand({
       setIsListening(false)
     }
 
-    recognitionRef.current.onerror = (event: any) => {
+    recognitionRef.current.onerror = (event) => {
       // Handle network errors gracefully
       if (event.error === 'network') {
         console.warn(
