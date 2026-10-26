@@ -1,18 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import Session
 from src.api.auth import (
     create_access_token,
-    verify_refresh_token,
-    revoke_refresh_token,
-    revoke_all_user_tokens,
-    get_current_user,
     create_refresh_token_in_db,
+    get_current_user,
+    revoke_all_user_tokens,
+    revoke_refresh_token,
+    verify_refresh_token,
 )
 from src.lib.database import get_session
 from src.models.user import User
-from typing import Optional
-import logging
 
 logger = logging.getLogger("todo-api")
 
