@@ -3,6 +3,7 @@
 This module provides a unified interface for interacting with multiple LLM providers
 (Grok and Gemini), handling API keys, configuration, and provider switching.
 """
+
 from enum import Enum
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
@@ -14,6 +15,7 @@ load_dotenv()
 
 class LLMProvider(Enum):
     """Supported LLM providers."""
+
     GROQ = "groq"
     GEMINI = "gemini"
 
@@ -21,6 +23,7 @@ class LLMProvider(Enum):
 @dataclass
 class LLMConfig:
     """Configuration for an LLM provider."""
+
     provider: LLMProvider
     model: str
     max_tokens: int = 2000
