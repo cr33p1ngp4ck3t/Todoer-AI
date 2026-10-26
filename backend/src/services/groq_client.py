@@ -6,12 +6,12 @@ making it easy to integrate with existing OpenAI client libraries.
 Groq provides ultra-fast inference for open-source models like Llama, Gemma, etc.
 """
 
-import asyncio
-from typing import AsyncIterator, Dict, Any, List, Optional
-from openai import AsyncOpenAI, AsyncStream
-from openai.types.chat import ChatCompletionChunk, ChatCompletion
-from src.services.llm_providers import LLMConfig, LLMProvider
 import logging
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionChunk
+from src.services.llm_providers import LLMConfig, LLMProvider
 
 logger = logging.getLogger("todo-api")
 
