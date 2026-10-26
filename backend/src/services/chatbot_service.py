@@ -5,17 +5,17 @@ management to provide a unified chatbot interface with streaming support.
 """
 
 import json
-import asyncio
-from typing import AsyncIterator, Dict, Any, List, Optional, Tuple
+import logging
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 from uuid import UUID
+
 from sqlmodel import Session
-from src.services.llm_providers import LLMProvider, LLMProviderManager
-from src.services.groq_client import GroqClient
-from src.services.gemini_client import GeminiClient
-from src.services.mcp_server import MCPToolHandler, get_mcp_tools
 from src.models.conversation import Conversation
 from src.models.message import Message
-import logging
+from src.services.gemini_client import GeminiClient, create_gemini_client
+from src.services.groq_client import GroqClient, create_groq_client
+from src.services.llm_providers import LLMProvider, LLMProviderManager
+from src.services.mcp_server import MCPToolHandler, get_mcp_tools
 
 logger = logging.getLogger("todo-api")
 
@@ -353,8 +353,3 @@ Remember: You have access to the user's actual task data through your tools."""
             Tool execution result
         """
         return self.mcp_handler.execute_tool(tool_name, arguments)
-
-
-# Import helper functions at module level
-from src.services.groq_client import create_groq_client
-from src.services.gemini_client import create_gemini_client
