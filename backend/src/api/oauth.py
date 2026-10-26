@@ -1,21 +1,21 @@
 """OAuth authentication endpoints for social login (Google, GitHub, etc.)"""
 
+import logging
+import os
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
-from src.lib.oauth_providers import oauth, is_provider_supported
-from src.lib.database import get_session
-from src.models.user import User
-from src.models.oauth_account import OAuthAccount
 from src.api.auth import (
     create_access_token,
     create_refresh_token_in_db,
     get_password_hash,
 )
-from typing import Optional
-from datetime import datetime, timezone
-import logging
-import os
+from src.lib.database import get_session
+from src.lib.oauth_providers import is_provider_supported, oauth
+from src.models.oauth_account import OAuthAccount
+from src.models.user import User
 
 logger = logging.getLogger("todo-api")
 
