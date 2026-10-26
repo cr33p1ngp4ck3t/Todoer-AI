@@ -117,7 +117,8 @@ const config: Config = {
         divider: 'hsl(var(--divider))',
       },
       backgroundImage: {
-        'gradient-page': 'linear-gradient(to bottom right, hsl(var(--gradient-from)), hsl(var(--gradient-to)))',
+        'gradient-page':
+          'linear-gradient(to bottom right, hsl(var(--gradient-from)), hsl(var(--gradient-to)))',
       },
       borderRadius: {
         lg: 'var(--radius)',
