@@ -21,6 +21,8 @@ spec:
       - name: backend
         image: todo-backend:local
         imagePullPolicy: Never
+        command: ["uvicorn", "src.main:app"]
+        args: ["--host", "0.0.0.0", "--port", "8000", "--root-path", "/api", "--proxy-headers", "--forwarded-allow-ips", "*"]
         ports:
         - containerPort: 8000
         envFrom:
