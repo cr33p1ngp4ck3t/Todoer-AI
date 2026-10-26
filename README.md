@@ -1,0 +1,134 @@
+# Todoer
+
+A full-stack task manager with accounts, priorities, tags, search, filtering, and an optional AI assistant. The backend uses FastAPI and SQLModel; the frontend uses Next.js and TypeScript. Groq/Gemini and Google/GitHub OAuth are optional integrations.
+
+## Quick start with Docker Compose
+
+Install Docker with Compose v2 or newer, then clone this repository:
+
+```sh
+git clone https://github.com/cr33p1ngp4ck3t/todo-app.git
+cd todo-app
+cp .env.example .env
+```
+
+In PowerShell, use `Copy-Item .env.example .env`. Generate three separate values with `python -c "import secrets; print(secrets.token_hex(32))"` and put them in `.env` as `POSTGRES_PASSWORD`, `SECRET_KEY`, and `SESSION_SECRET`. Hex passwords avoid reserved characters in the database URL. Optional provider credentials can stay empty.
+
+```sh
+docker compose up --build --wait
+```
+
+Open <http://localhost:3000>, create an account, and sign in. API documentation is at <http://localhost:8000/docs>. Check database readiness at <http://localhost:8000/health> or `/health/ready`; `/health/live` checks only whether the process is alive.
+
+Compose starts PostgreSQL, waits for it to become healthy, then starts the API and frontend. Ports bind to localhost. The API creates tables on first startup. PostgreSQL data persists across `docker compose down`; **`docker compose down --volumes` permanently deletes local data**. This is a local development setup, not a production deployment recipe.
+
+The browser API URL is baked into the frontend build. After changing `NEXT_PUBLIC_API_URL`, rebuild with `docker compose up --build --wait`. A Docker-only hostname such as `backend` is not a usable browser URL.
+
+## Local development
+
+Prerequisites: Python 3.11, [uv](https://docs.astral.sh/uv/getting-started/installation/), and Node.js 22 with npm. The backend lock supports Python 3.11–3.13; CI uses 3.11.
+
+Backend, from the repository root:
+
+```sh
+cp backend/.env.example backend/.env
+uv sync --project backend --locked
+```
+
+Set separate generated `SECRET_KEY` and `SESSION_SECRET` values in `backend/.env`. The example uses a local SQLite file; no PostgreSQL server is required for this path. Then start the API:
+
+```sh
+cd backend
+uv run --locked uvicorn src.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Frontend, in a second terminal:
+
+```sh
+cd frontend
+cp .env.example .env.local
+npm ci
+npm run dev
+```
+
+PowerShell users can replace each `cp` with `Copy-Item`. For a production frontend build, run `npm run build` followed by `npm run start`.
+
+## Configuration
+
+Backend variables are read from `backend/.env` for local development. Compose reads the root `.env`. Never commit either file. The frontend example contains only public configuration; never put secrets in a `NEXT_PUBLIC_` variable.
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | SQLAlchemy SQLite or PostgreSQL URL. Compose supplies the PostgreSQL URL. |
+| `SECRET_KEY` | Required stable, random JWT signing secret. |
+| `SESSION_SECRET` | Stable random secret for OAuth session cookies. |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifetime; default 15. Refresh tokens last 30 days. |
+| `CORS_ORIGINS` | Comma-separated allowed browser origins; default `http://localhost:3000`. |
+| `FRONTEND_URL` | Frontend origin used by OAuth redirects. |
+| `DEFAULT_LLM_PROVIDER` | `groq` (default) or `gemini`; falls back to a configured provider. |
+| `GROQ_API_KEY`, `GEMINI_API_KEY` | Optional AI credentials; normal task management needs neither. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional Google OAuth application credentials. |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | Optional GitHub OAuth application credentials. |
+| `NEXT_PUBLIC_API_URL` | Browser-reachable API base URL, read at frontend build time. |
+| `POSTGRES_PASSWORD` | Compose-only PostgreSQL password. |
+
+Register OAuth callback URLs as `http://localhost:8000/auth/oauth/google/callback` or `http://localhost:8000/auth/oauth/github/callback`. Microsoft OAuth is a commented example and is not implemented. Provider SDK/model availability can change; live AI and OAuth require separately configured accounts.
+
+## Tests and quality checks
+
+Run backend checks **from the repository root**:
+
+```sh
+uv run --project backend --locked ruff check backend/src backend/tests
+uv run --project backend --locked black --check backend/src backend/tests
+uv run --project backend --locked pytest
+uv run --project backend --locked pip-audit --disable-pip --require-hashes -r backend/requirements.txt
+```
+
+Pytest uses a fresh in-memory SQLite database for each test, overrides the API session dependency, disables dotenv loading, and mocks AI providers. No live server, database credentials, or AI keys are needed. Coverage is printed and written to `coverage.xml`; the minimum is 60% across backend source.
+
+Frontend checks:
+
+```sh
+cd frontend
+npm ci
+npm run lint
+npm run typecheck
+npm run format:check
+npm run build
+npx playwright install chromium
+npm test
+npm audit --omit=dev --audit-level=high
+```
+
+On Linux, install browser system dependencies with `npx playwright install --with-deps chromium`. Playwright starts its configured local web server and tests authentication and task flows with mocked API responses. To exercise the real Compose backend instead, start the stack and run `python scripts/smoke_test.py` from the root. The smoke test creates a unique account and removes its test task; use a disposable local database.
+
+GitHub Actions runs backend and frontend checks on every pull request and push to `main`, plus Helm lint/render and a Compose build/start/API smoke test. Hosted CI results must be checked on GitHub after pushing.
+
+## Repository layout
+
+| Path | Responsibility |
+| --- | --- |
+| `backend/src/api/` | HTTP endpoints and authentication. |
+| `backend/src/services/` | Task operations, AI provider clients, and MCP tools. |
+| `backend/src/models/`, `backend/src/lib/` | SQLModel tables, sessions, OAuth setup, JSON logging. |
+| `backend/tests/` | Isolated unit and API tests. |
+| `frontend/src/` | Next.js pages, components, auth context, API client. |
+| `frontend/tests/` | Browser regression tests. |
+| `helm/todo-app/`, `k8s/` | Existing Kubernetes deployment templates and experiments. |
+| `specs/`, `history/` | Original specifications and development notes. |
+
+The Helm chart can be checked with `helm lint --strict helm/todo-app` and `helm template todo helm/todo-app`. Build its frontend image with the default same-origin `/api` URL; the chart's nginx ingress removes that external prefix and tells FastAPI to include it in generated OAuth callback URLs. Before installing, create the Secret named by `backendSecrets.existingSecret` with `DATABASE_URL`, `SECRET_KEY`, and `SESSION_SECRET`; add AI or OAuth variables only when those integrations are enabled. The chart deliberately does not generate credentials. Existing Kubernetes/cloud instructions in [DEPLOYMENT.md](DEPLOYMENT.md) still need real registry, ingress, and database configuration. They do not replace the local setup above; no cluster is provisioned by CI. Review historical Alembic migrations before applying them to an existing database. The optional Gemini integration uses the deprecated `google-generativeai` SDK and needs migration before relying on it in production.
+
+## Updating dependencies and contributing
+
+Python dependencies live in `backend/pyproject.toml`. Update intentionally, then regenerate both lock and pip export:
+
+```sh
+uv lock --project backend
+uv export --project backend --locked --no-dev --no-emit-project --output-file backend/requirements.txt
+```
+
+Commit `backend/uv.lock` and its generated `requirements.txt` together. `requirements.txt` is a compatibility export for Docker and pip, not a second editable dependency list. Commit npm changes with `frontend/package-lock.json`. Dependabot proposes weekly dependency updates.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Keep fixes and their regression tests together in focused commits. Release tags should follow successful CI and an actual review.
