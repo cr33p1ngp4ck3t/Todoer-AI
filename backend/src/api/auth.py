@@ -13,22 +13,27 @@ import os
 # Password hashing context - using argon2 for security and compatibility
 pwd_context = CryptContext(
     schemes=["argon2", "bcrypt"],  # argon2 for new, bcrypt for migration
-    deprecated=["bcrypt"],          # Mark bcrypt as deprecated
-    argon2__memory_cost=65536,      # 64 MB
-    argon2__time_cost=3,            # 3 iterations
-    argon2__parallelism=4,          # 4 parallel threads
+    deprecated=["bcrypt"],  # Mark bcrypt as deprecated
+    argon2__memory_cost=65536,  # 64 MB
+    argon2__time_cost=3,  # 3 iterations
+    argon2__parallelism=4,  # 4 parallel threads
 )
 
 # JWT Configuration (read from environment variables)
 SECRET_KEY = os.getenv("SECRET_KEY", "ehf2938eny12830bcy12")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))  # Reduced to 15 minutes with refresh tokens
+ACCESS_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15")
+)  # Reduced to 15 minutes with refresh tokens
 REFRESH_TOKEN_EXPIRE_DAYS = 30  # Refresh tokens last 30 days
 
 security = HTTPBearer()
 
+
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
+        HTTPBearer(auto_error=False)
+    ),
     session: Session = Depends(get_session),
 ) -> Optional[User]:
     """Extract and validate user from JWT token. Returns None for dev (no auth)."""
@@ -57,10 +62,10 @@ async def get_current_user(
         payload = jwt.decode(
             credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM]
         )
-        user_id: str 
-        sub = payload.get("sub") 
-        if sub is None: 
-            raise credentials_exception 
+        user_id: str
+        sub = payload.get("sub")
+        if sub is None:
+            raise credentials_exception
         user_id = str(sub)
     except JWTError:
         raise credentials_exception
@@ -70,32 +75,40 @@ async def get_current_user(
         raise credentials_exception
     return user
 
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Generate JWT access token."""
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+        )
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a hash."""
     return pwd_context.verify(plain_password, hashed_password)
 
+
 def needs_rehash(hashed_password: str) -> bool:
     """Check if password hash needs upgrade to current scheme."""
     return pwd_context.needs_update(hashed_password)
+
 
 def get_password_hash(password: str) -> str:
     """Generate password hash."""
     return pwd_context.hash(password)
 
+
 # Refresh Token Functions
 import secrets
 import hashlib
+
 
 def generate_refresh_token() -> str:
     """Generate a cryptographically secure random refresh token.
@@ -103,6 +116,7 @@ def generate_refresh_token() -> str:
     Returns a 64-character hex string (32 bytes of randomness).
     """
     return secrets.token_hex(32)
+
 
 def hash_token(token: str) -> str:
     """Hash a refresh token for storage using SHA-256.
@@ -112,11 +126,12 @@ def hash_token(token: str) -> str:
     """
     return hashlib.sha256(token.encode()).hexdigest()
 
+
 def create_refresh_token_in_db(
     session: Session,
     user_id: UUID,
     user_agent: Optional[str] = None,
-    ip_address: Optional[str] = None
+    ip_address: Optional[str] = None,
 ) -> tuple[str, "RefreshToken"]:
     """Create a refresh token for a user and store it in the database.
 
@@ -147,6 +162,7 @@ def create_refresh_token_in_db(
     session.refresh(refresh_token)
 
     return plain_token, refresh_token
+
 
 def verify_refresh_token(session: Session, token: str) -> Optional[User]:
     """Verify a refresh token and return the associated user.
@@ -189,6 +205,7 @@ def verify_refresh_token(session: Session, token: str) -> Optional[User]:
 
     return user
 
+
 def revoke_refresh_token(session: Session, token: str) -> bool:
     """Revoke a refresh token (logout).
 
@@ -200,8 +217,7 @@ def revoke_refresh_token(session: Session, token: str) -> bool:
     token_hash = hash_token(token)
 
     refresh_token = session.exec(
-        select(RefreshToken)
-        .where(RefreshToken.token_hash == token_hash)
+        select(RefreshToken).where(RefreshToken.token_hash == token_hash)
     ).first()
 
     if refresh_token:
@@ -210,6 +226,7 @@ def revoke_refresh_token(session: Session, token: str) -> bool:
         return True
 
     return False
+
 
 def revoke_all_user_tokens(session: Session, user_id: UUID) -> int:
     """Revoke all refresh tokens for a user (logout all devices).
