@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Task, TaskUpdate } from '@/services/api'
 import {
   Dialog,
@@ -127,8 +127,8 @@ export default function EditTaskModal({
               placeholder="Add more details (optional)..."
               rows={3}
               className={cn(
-                'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input shadow-xs min-w-full rounded-md bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700',
-                'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]'
+                'shadow-xs min-w-full rounded-md border-input bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-input/30',
+                'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
               )}
             />
           </div>
@@ -144,7 +144,9 @@ export default function EditTaskModal({
               </label>
               <Select
                 value={priority}
-                onValueChange={(v) => setPriority(v as 'low' | 'medium' | 'high')}
+                onValueChange={(v) =>
+                  setPriority(v as 'low' | 'medium' | 'high')
+                }
               >
                 <SelectTrigger className="w-full">
                   <SelectValue className="" />
@@ -211,7 +213,7 @@ export default function EditTaskModal({
 
           {/* Status Badge */}
           <div className="mb-6">
-            <span className="text-muted-foreground text-sm">
+            <span className="text-sm text-muted-foreground">
               Status:{' '}
               <span className="font-medium capitalize">{task.status}</span>
             </span>
