@@ -66,7 +66,9 @@ class TaskService:
 
     def get_by_id(self, task_id: UUID, session: Session) -> Optional[Task]:
         """Get a single task by ID (user-scoped)."""
-        return session.get(Task, task_id)
+        return session.exec(
+            select(Task).where(Task.id == task_id, Task.owner_id == self.user_id)
+        ).first()
 
     def create(
         self,
@@ -117,7 +119,7 @@ class TaskService:
     ) -> Optional[Task]:
         """Update an existing task (user-scoped, last-write-wins)."""
         task = self.get_by_id(task_id, session)
-        if not task or task.owner_id != self.user_id:
+        if not task:
             return None
 
         if title is not None:
@@ -153,7 +155,7 @@ class TaskService:
     def delete(self, task_id: UUID, session: Session) -> bool:
         """Delete a task permanently (user-scoped)."""
         task = self.get_by_id(task_id, session)
-        if not task or task.owner_id != self.user_id:
+        if not task:
             return False
 
         session.delete(task)
