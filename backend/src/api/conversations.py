@@ -1,17 +1,18 @@
 """Conversation management API endpoints."""
 
+import logging
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlmodel import Session, select, func
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlmodel import Session, func, select
+from src.api.auth import get_current_user
 from src.lib.database import get_session
-from src.models.user import User
 from src.models.conversation import Conversation
 from src.models.message import Message
-from src.api.auth import get_current_user
-import logging
+from src.models.user import User
 
 logger = logging.getLogger("todo-api")
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
