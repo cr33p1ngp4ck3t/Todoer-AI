@@ -1,5 +1,5 @@
 # --- Builder Stage ---
-FROM node:22-slim AS builder
+FROM node:26-slim AS builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN npm run build
 
 # --- Production Stage ---
-FROM node:22-slim
+FROM node:26-slim
 
 WORKDIR /app
 
