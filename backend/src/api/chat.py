@@ -1,4 +1,5 @@
 """Chat API endpoints with SSE streaming support."""
+
 import json
 import asyncio
 from typing import AsyncIterator
@@ -21,12 +22,14 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 class ChatRequest(BaseModel):
     """Request model for chat messages."""
+
     message: str
     conversation_id: UUID | None = None
 
 
 class ToolCallRequest(BaseModel):
     """Request model for tool calls from client."""
+
     tool_name: str
     arguments: dict
 
@@ -61,25 +64,25 @@ async def chat_stream(
             stream=True,
         ):
             # Format as SSE event
-            if hasattr(chunk, 'choices') and chunk.choices:
+            if hasattr(chunk, "choices") and chunk.choices:
                 delta = chunk.choices[0].delta
-                if hasattr(delta, 'content') and delta.content:
+                if hasattr(delta, "content") and delta.content:
                     yield f"data: {json.dumps({'type': 'content', 'content': delta.content})}\n\n"
 
             # Check for tool calls
-            if hasattr(chunk, 'choices') and chunk.choices:
+            if hasattr(chunk, "choices") and chunk.choices:
                 delta = chunk.choices[0].delta
-                if hasattr(delta, 'tool_calls') and delta.tool_calls:
+                if hasattr(delta, "tool_calls") and delta.tool_calls:
                     for tool_call in delta.tool_calls:
                         tool_data = {
-                            'type': 'tool_call',
-                            'data': {
-                                'id': tool_call.id,
-                                'function': {
-                                    'name': tool_call.function.name,
-                                    'arguments': tool_call.function.arguments,
-                                }
-                            }
+                            "type": "tool_call",
+                            "data": {
+                                "id": tool_call.id,
+                                "function": {
+                                    "name": tool_call.function.name,
+                                    "arguments": tool_call.function.arguments,
+                                },
+                            },
                         }
                         yield f"data: {json.dumps(tool_data)}\n\n"
 
@@ -109,8 +112,7 @@ async def send_message(
     """
     if not request.message.strip():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Message cannot be empty"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Message cannot be empty"
         )
 
     logger.info(f"Chat request from user {current_user.id}: {request.message[:100]}...")
@@ -163,6 +165,7 @@ async def execute_tool_call(
 
 class SmartParseRequest(BaseModel):
     """Request model for smart task parsing."""
+
     text: str
 
 
@@ -184,8 +187,7 @@ async def smart_parse_task(
     """
     if not request.text.strip():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Text cannot be empty"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty"
         )
 
     chatbot = ChatbotService(
