@@ -1,14 +1,14 @@
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session, select
-from src.models.task import Task
-from src.models.user import User
-from src.services.task_service import TaskService, VALID_PRIORITIES, VALID_STATUSES
+from sqlmodel import Session
 from src.api.auth import get_current_user
 from src.lib.database import get_session
+from src.models.user import User
+from src.services.task_service import VALID_PRIORITIES, VALID_STATUSES, TaskService
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -103,14 +103,17 @@ async def create_task(
     if current_user is None:
         raise HTTPException(status_code=401, detail="Authentication required")
     service = TaskService(user_id=current_user.id)
-    created = service.create(
-        session=session,
-        title=task.title,
-        description=task.description,
-        priority=task.priority,
-        due_date=task.due_date,
-        tags=task.tags,
-    )
+    try:
+        created = service.create(
+            session=session,
+            title=task.title,
+            description=task.description,
+            priority=task.priority,
+            due_date=task.due_date,
+            tags=task.tags,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return TaskResponse(
         id=created.id,
         owner_id=created.owner_id,
@@ -163,16 +166,19 @@ async def update_task(
     if current_user is None:
         raise HTTPException(status_code=401, detail="Authentication required")
     service = TaskService(user_id=current_user.id)
-    updated = service.update(
-        task_id=task_id,
-        session=session,
-        title=task_update.title,
-        description=task_update.description,
-        status=task_update.status,
-        priority=task_update.priority,
-        due_date=task_update.due_date,
-        tags=task_update.tags,
-    )
+    try:
+        updated = service.update(
+            task_id=task_id,
+            session=session,
+            title=task_update.title,
+            description=task_update.description,
+            status=task_update.status,
+            priority=task_update.priority,
+            due_date=task_update.due_date,
+            tags=task_update.tags,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not updated:
         raise HTTPException(status_code=404, detail="Task not found")
     return TaskResponse(

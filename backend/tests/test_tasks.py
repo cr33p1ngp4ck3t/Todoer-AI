@@ -179,6 +179,15 @@ def test_create_task_with_invalid_priority_raises(task_service, db_session):
         )
 
 
+def test_create_task_with_empty_title_raises(task_service, db_session):
+    """Test creating task without title raises error."""
+    with pytest.raises(ValueError, match="title cannot be empty"):
+        task_service.create(
+            session=db_session,
+            title="   ",
+        )
+
+
 def test_create_task_user_isolation(task_service, db_session):
     """Test tasks are isolated to the creating user."""
     from src.models.user import User
@@ -231,6 +240,37 @@ def test_update_task(task_service, db_session):
     assert updated.status == "completed"
     assert len(updated.tags) == 1
     assert updated.tags[0].name == "new-tag"
+
+
+def test_update_task_with_invalid_priority(task_service, db_session):
+    """Test updating task with invalid priority raises ValueError."""
+    task = task_service.create(session=db_session, title="Test")
+
+    with pytest.raises(ValueError, match="Invalid priority"):
+        task_service.update(
+            task_id=task.id,
+            session=db_session,
+            priority="invalid",
+        )
+
+
+@pytest.mark.parametrize(
+    "values,message",
+    [
+        ({"title": "   "}, "title cannot be empty"),
+        ({"status": "invalid"}, "Invalid status"),
+    ],
+)
+def test_update_rejects_invalid_values_without_changes(
+    task_service, db_session, values, message
+):
+    task = task_service.create(db_session, title="Original", priority="low")
+    with pytest.raises(ValueError, match=message):
+        task_service.update(task.id, db_session, **values)
+    db_session.refresh(task)
+    assert task.title == "Original"
+    assert task.status == "pending"
+    assert task.priority == "low"
 
 
 def test_replacing_tags_and_deletion(db_session, task_service):

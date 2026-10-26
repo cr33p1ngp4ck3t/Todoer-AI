@@ -1,11 +1,11 @@
+import logging
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
+
 from sqlalchemy import or_
 from sqlmodel import Session, select
-from src.models.task import Task, Tag
-from src.models.user import User
-import logging
+from src.models.task import Tag, Task
 
 logger = logging.getLogger("todo-api")
 
@@ -80,6 +80,8 @@ class TaskService:
         tags: Optional[List[str]] = None,
     ) -> Task:
         """Create a new task for current user."""
+        if not title.strip():
+            raise ValueError("title cannot be empty")
         if priority not in VALID_PRIORITIES:
             raise ValueError(f"Invalid priority: {priority}")
 
@@ -122,13 +124,20 @@ class TaskService:
         if not task:
             return None
 
+        if title is not None and not title.strip():
+            raise ValueError("title cannot be empty")
+        if status is not None and status not in VALID_STATUSES:
+            raise ValueError(f"Invalid status: {status}")
+        if priority is not None and priority not in VALID_PRIORITIES:
+            raise ValueError(f"Invalid priority: {priority}")
+
         if title is not None:
             task.title = title.strip()
         if description is not None:
             task.description = description.strip() if description else None
-        if status is not None and status in VALID_STATUSES:
+        if status is not None:
             task.status = status
-        if priority is not None and priority in VALID_PRIORITIES:
+        if priority is not None:
             task.priority = priority
         if due_date is not None:
             task.due_date = due_date
