@@ -110,5 +110,7 @@ async def logout_all_devices(
     """
     count = revoke_all_user_tokens(session, current_user.id)
 
-    logger.info(f"User {current_user.id} logged out from all devices ({count} tokens revoked)")
+    logger.info(
+        f"User {current_user.id} logged out from all devices ({count} tokens revoked)"
+    )
     return MessageResponse(message=f"Logged out from {count} device(s)")
