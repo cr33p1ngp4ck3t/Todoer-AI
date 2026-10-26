@@ -27,3 +27,31 @@ def test_database_startup_uses_installed_driver(monkeypatch, module_name, url, d
     finally:
         monkeypatch.setenv("DATABASE_URL", "sqlite://")
         importlib.reload(module)
+
+
+def test_session_commits_successful_request(db_engine):
+    user = User(
+        username="committed", email="commit@example.com", hashed_password="hash"
+    )
+    dependency = get_session()
+    session = next(dependency)
+    session.add(user)
+    user_id = user.id
+    with pytest.raises(StopIteration):
+        next(dependency)
+    with Session(db_engine) as check:
+        assert check.get(User, user_id) is not None
+
+
+def test_session_rolls_back_failed_request(db_engine):
+    user = User(
+        username="rolledback", email="rollback@example.com", hashed_password="hash"
+    )
+    dependency = get_session()
+    session = next(dependency)
+    session.add(user)
+    session.flush()
+    with pytest.raises(RuntimeError, match="request failed"):
+        dependency.throw(RuntimeError("request failed"))
+    with Session(db_engine) as check:
+        assert check.get(User, user.id) is None
