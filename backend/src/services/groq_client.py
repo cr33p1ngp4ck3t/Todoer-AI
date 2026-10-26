@@ -5,6 +5,7 @@ making it easy to integrate with existing OpenAI client libraries.
 
 Groq provides ultra-fast inference for open-source models like Llama, Gemma, etc.
 """
+
 import asyncio
 from typing import AsyncIterator, Dict, Any, List, Optional
 from openai import AsyncOpenAI, AsyncStream
@@ -58,7 +59,9 @@ class GroqClient:
         Yields:
             Chat completion chunks if streaming
         """
-        logger.info(f"Sending request to Groq with {len(messages)} messages, model: {self.config.model}")
+        logger.info(
+            f"Sending request to Groq with {len(messages)} messages, model: {self.config.model}"
+        )
 
         try:
             if tools:
