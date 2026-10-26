@@ -10,9 +10,11 @@ if TYPE_CHECKING:
 VALID_PRIORITIES = ["low", "medium", "high"]
 VALID_STATUSES = ["pending", "completed"]
 
+
 def utcnow():
     """Return current UTC datetime."""
     return datetime.now(timezone.utc)
+
 
 class Task(SQLModel, table=True):
     __tablename__: str = "task"
@@ -28,7 +30,10 @@ class Task(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utcnow)
 
     owner: "User" = Relationship(back_populates="tasks")
-    tags: List["Tag"] = Relationship(back_populates="task", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    tags: List["Tag"] = Relationship(
+        back_populates="task", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+
 
 class Tag(SQLModel, table=True):
     __tablename__: str = "tag"
