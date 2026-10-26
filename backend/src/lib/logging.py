@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
+
 class JSONFormatter(logging.Formatter):
     """Structured JSON logging for observability."""
 
@@ -20,6 +21,7 @@ class JSONFormatter(logging.Formatter):
         if record.exc_info:
             log_entry["exception"] = self.formatException(record.exc_info)
         return json.dumps(log_entry)
+
 
 # Configure root logger
 logging.basicConfig(
