@@ -4,11 +4,12 @@ This module defines the tools available to the LLM for task management.
 Each tool has a JSON schema for validation and a handler function.
 """
 
-from typing import Any, Dict, List, Optional
+import logging
+from typing import Any, Dict, List
 from uuid import UUID
+
 from sqlmodel import Session
 from src.services.task_service import TaskService
-import logging
 
 logger = logging.getLogger("todo-api")
 
