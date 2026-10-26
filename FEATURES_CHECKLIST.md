@@ -70,7 +70,7 @@
 **Files Created:**
 - `k8s/namespace.yaml`
 - `k8s/configmap.yaml`
-- `k8s/secrets.yaml`
+- Deployment scripts create `backend-secrets` and `postgres-secret`
 - `k8s/postgres.yaml`
 - `k8s/backend-deployment.yaml`
 - `k8s/frontend-deployment.yaml`
