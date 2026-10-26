@@ -172,3 +172,42 @@ test('expired task session clears stored tokens and returns to login', async ({
     await page.evaluate(() => localStorage.getItem('refresh_token'))
   ).toBeNull()
 })
+
+test('authenticated user creates, edits, completes and deletes a task', async ({
+  page,
+}) => {
+  const runtimeErrors: string[] = []
+  page.on('pageerror', (error) => runtimeErrors.push(error.message))
+  await login(page)
+  await expect(page).toHaveTitle('Todoer - Be Productive')
+  await page.getByRole('button', { name: '+ New Task' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'Manual', exact: true }).click()
+  await dialog.getByLabel('Title').fill('Buy groceries')
+  await dialog.getByLabel('Due Date').fill('2000-01-01T12:00')
+  await dialog.getByRole('button', { name: 'Create Task', exact: true }).click()
+  await expect(page.getByText('Buy groceries', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Overdue:/)).toBeVisible()
+  await page.getByRole('button', { name: 'Edit task Buy groceries' }).click()
+  await dialog.getByLabel('Title').fill('Buy milk')
+  await dialog.getByRole('button', { name: 'Save Changes' }).click()
+  await expect(page.getByText('Buy milk', { exact: true })).toBeVisible()
+  await page
+    .getByRole('button', { name: 'Mark task Buy milk as completed' })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Completed (1)' })
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Delete task Buy milk' }).click()
+  await expect(page.getByText('Buy milk', { exact: true })).toHaveCount(0)
+  await page.evaluate(() => localStorage.setItem('refresh_token', 'old-token'))
+  await page.getByRole('button', { name: 'Logout' }).click()
+  await expect(page).toHaveURL(/\/login$/)
+  expect(
+    await page.evaluate(() => localStorage.getItem('access_token'))
+  ).toBeNull()
+  expect(
+    await page.evaluate(() => localStorage.getItem('refresh_token'))
+  ).toBeNull()
+  expect(runtimeErrors).toEqual([])
+})

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, Task, TaskCreate, TaskUpdate } from '../../services/api'
 import TaskItem from '../../components/TaskItem'
@@ -17,7 +17,6 @@ import ProductivityChart from '../../components/ProductivityChart'
 import { Button } from '../../components/ui/button'
 import { Dialog, DialogContent } from '../../components/ui/dialog'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -32,6 +31,23 @@ export default function Dashboard() {
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [sortBy, setSortBy] = useState('created_at')
 
+  const loadTasks = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await api.tasks.list({
+        search: searchQuery || undefined,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        priority: priorityFilter === 'all' ? undefined : priorityFilter,
+        sort_by: sortBy === 'created_at_asc' ? 'created_at' : sortBy,
+      })
+      setTasks(data)
+    } catch (error) {
+      console.error('Failed to load tasks:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [searchQuery, statusFilter, priorityFilter, sortBy])
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -42,9 +58,10 @@ export default function Dashboard() {
   // Load tasks when filters change (must be before early returns)
   useEffect(() => {
     if (user && !authLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Show loading while synchronizing tasks with the API.
       loadTasks()
     }
-  }, [user, authLoading, searchQuery, statusFilter, priorityFilter, sortBy])
+  }, [user, authLoading, loadTasks])
 
   // Don't render anything while checking auth
   if (authLoading) {
@@ -61,23 +78,6 @@ export default function Dashboard() {
   // Don't render dashboard if not logged in (will redirect)
   if (!user) {
     return null
-  }
-
-  const loadTasks = async () => {
-    try {
-      setLoading(true)
-      const data = await api.tasks.list({
-        search: searchQuery || undefined,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        priority: priorityFilter === 'all' ? undefined : priorityFilter,
-        sort_by: sortBy === 'created_at_asc' ? 'created_at' : sortBy,
-      })
-      setTasks(data)
-    } catch (error) {
-      console.error('Failed to load tasks:', error)
-    } finally {
-      setLoading(false)
-    }
   }
 
   const handleCreateTask = async (task: TaskCreate) => {

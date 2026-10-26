@@ -21,11 +21,16 @@ export default function TaskItem({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isToggling, setIsToggling] = useState(false)
   const isCompleted = task.status === 'completed'
+  const now = new Date()
 
   // Check if task is overdue
-  const isOverdue = task.due_date && !isCompleted && new Date(task.due_date) < new Date()
-  const isDueSoon = task.due_date && !isCompleted && !isOverdue &&
-    new Date(task.due_date) < new Date(Date.now() + 24 * 60 * 60 * 1000) // within 24 hours
+  const isOverdue =
+    task.due_date && !isCompleted && new Date(task.due_date) < now
+  const isDueSoon =
+    task.due_date &&
+    !isCompleted &&
+    !isOverdue &&
+    new Date(task.due_date).getTime() < now.getTime() + 24 * 60 * 60 * 1000 // within 24 hours
 
   // Format due date for display
   const formatDueDate = (dateString: string) => {
@@ -43,7 +48,12 @@ export default function TaskItem({
     if (isTomorrow) {
       return `Tomorrow at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
     }
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    return date.toLocaleDateString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
 
   const handleDelete = async () => {
@@ -117,14 +127,17 @@ export default function TaskItem({
             <div
               className={`mt-2 flex items-center gap-1 text-xs ${
                 isOverdue
-                  ? 'text-destructive font-medium'
+                  ? 'font-medium text-destructive'
                   : isDueSoon
-                    ? 'text-warning font-medium'
+                    ? 'font-medium text-warning'
                     : 'text-text-muted'
               }`}
             >
               <Calendar className="h-3 w-3" />
-              <span>{isOverdue ? 'Overdue: ' : ''}{formatDueDate(task.due_date)}</span>
+              <span>
+                {isOverdue ? 'Overdue: ' : ''}
+                {formatDueDate(task.due_date)}
+              </span>
             </div>
           )}
 
