@@ -191,7 +191,7 @@ kubectl get svc -n ingress-nginx
 
 ## Step 7: Update Application Configuration
 
-### Update ConfigMaps with Cloud Settings
+### Update Backend Configuration
 
 Edit `k8s/configmap.yaml`:
 
@@ -202,32 +202,22 @@ metadata:
   name: backend-config
   namespace: todo-app
 data:
-  DATABASE_URL: "postgresql://todo:${POSTGRES_PASSWORD}@postgres:5432/todo_db"
-  ENVIRONMENT: "production"
-  LOG_LEVEL: "info"
+  FRONTEND_URL: "https://yourdomain.com"
   CORS_ORIGINS: "https://yourdomain.com,https://www.yourdomain.com"
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: frontend-config
-  namespace: todo-app
-data:
-  NEXT_PUBLIC_API_URL: "https://api.yourdomain.com"  # Update with your domain
-  NODE_ENV: "production"
 ```
 
-### Update Secrets for Production
+Build the frontend image with `NEXT_PUBLIC_API_URL=/api`; the ingress routes that same-origin prefix to the backend.
+
+### Create Secrets for Production
 
 Generate secure passwords:
 
 ```bash
-# Generate random secure passwords
-openssl rand -base64 32
+# Generate separate random secrets
+python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Update `k8s/secrets.yaml` with production credentials.
+Create `backend-secrets` and `postgres-secret` in the cluster. Do not store their values in a manifest or ConfigMap.
 
 ---
 
@@ -305,8 +295,15 @@ spec:
 # Create namespace
 kubectl apply -f k8s/namespace.yaml
 
-# Create secrets and configmaps
-kubectl apply -f k8s/secrets.yaml
+# Create secrets from your deployment environment, then apply configmaps
+kubectl create secret generic postgres-secret -n todo-app \
+  --from-literal=POSTGRES_USER=todo \
+  --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+  --from-literal=POSTGRES_DB=todo_db
+kubectl create secret generic backend-secrets -n todo-app \
+  --from-literal=DATABASE_URL="$DATABASE_URL" \
+  --from-literal=SECRET_KEY="$SECRET_KEY" \
+  --from-literal=SESSION_SECRET="$SESSION_SECRET"
 kubectl apply -f k8s/configmap.yaml
 
 # Deploy PostgreSQL

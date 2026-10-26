@@ -14,14 +14,7 @@ spec:
       - name: migration
         image: todo-backend:local
         imagePullPolicy: Never
-        command:
-          - bash
-          - -c
-          - |
-            set -e
-            echo "Starting database migrations..."
-            alembic upgrade head
-            echo "✅ Migrations completed successfully"
+        command: ["alembic", "upgrade", "head"]
         envFrom:
         - configMapRef:
             name: backend-config

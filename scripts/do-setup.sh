@@ -2,6 +2,10 @@
 
 set -e
 
+: "${DATABASE_URL:?Set DATABASE_URL before running this script}"
+: "${SECRET_KEY:?Set SECRET_KEY before running this script}"
+: "${SESSION_SECRET:?Set SESSION_SECRET before running this script}"
+
 echo "Starting DigitalOcean DOKS setup..."
 
 # Install doctl
@@ -75,6 +79,11 @@ dapr init --runtime-version=1.13.0 --kubernetes --helm-chart-version=1.13.0
 # Create namespace
 echo "Creating todo-app namespace..."
 kubectl create namespace todo-app || true
+kubectl create secret generic todo-backend-secrets -n todo-app \
+  --from-literal=DATABASE_URL="$DATABASE_URL" \
+  --from-literal=SECRET_KEY="$SECRET_KEY" \
+  --from-literal=SESSION_SECRET="$SESSION_SECRET" \
+  --dry-run=client -o yaml | kubectl apply -f -
 
 # Build and push images to Docker Hub (or your registry)
 echo "Building Docker images..."
@@ -100,8 +109,7 @@ helm install todo-app helm/todo-app \
   --set cloud.region=nyc3 \
   --set ingress.host=your-domain.com \
   --set image.backend.repository=your-registry/todo-backend \
-  --set image.frontend.repository=your-registry/todo-frontend \
-  --set monitoring.enabled=true
+  --set image.frontend.repository=your-registry/todo-frontend
 
 echo ""
 echo "✅ DigitalOcean DOKS setup complete!"
