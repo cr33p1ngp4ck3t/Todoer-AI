@@ -154,3 +154,21 @@ test('OAuth login uses the same-origin API gateway', async ({ page }) => {
   await page.getByRole('button', { name: 'Continue with GitHub' }).click()
   await expect(page).toHaveURL(/\/api\/auth\/oauth\/github$/)
 })
+
+test('expired task session clears stored tokens and returns to login', async ({
+  page,
+}) => {
+  await login(page)
+  await page.evaluate(() => localStorage.setItem('refresh_token', 'old-token'))
+  await page.route('**/api/tasks?**', async (route) => {
+    await route.fulfill({ status: 401, json: { detail: 'Token expired' } })
+  })
+  await page.getByRole('textbox', { name: 'Search tasks' }).fill('expired')
+  await expect(page).toHaveURL(/\/login\?expired=true$/)
+  expect(
+    await page.evaluate(() => localStorage.getItem('access_token'))
+  ).toBeNull()
+  expect(
+    await page.evaluate(() => localStorage.getItem('refresh_token'))
+  ).toBeNull()
+})

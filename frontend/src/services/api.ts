@@ -70,9 +70,10 @@ const getHeaders = () => {
 const handleAuthError = () => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
     // Dispatch event for AuthContext to handle
     window.dispatchEvent(new CustomEvent('auth:expired'))
-    // Redirect to login
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Reload to discard authenticated state after expiry.
     window.location.href = '/login?expired=true'
   }
 }
@@ -103,9 +104,7 @@ export const api = {
         {} as Record<string, string>
       )
       const query = new URLSearchParams(filteredParams).toString()
-      const url = query
-        ? `${API_URL}/tasks?${query}`
-        : `${API_URL}/tasks`
+      const url = query ? `${API_URL}/tasks?${query}` : `${API_URL}/tasks`
       const response = await fetch(url, {
         headers: getHeaders(),
       })
@@ -223,6 +222,7 @@ export const api = {
     logout: () => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
       }
     },
   },
