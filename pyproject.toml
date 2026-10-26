@@ -6,5 +6,17 @@ include = '\.pyi?$'
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+
+[tool.ruff.lint]
 select = ["E", "F", "B", "I"]
-ignore = ["E501"]
+ignore = ["E501", "B008"] # FastAPI uses Depends() in endpoint defaults.
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "--cov=backend/src --cov-report=term-missing --cov-report=xml --cov-fail-under=60"
+
+[tool.coverage.report]
+include_namespace_packages = true
