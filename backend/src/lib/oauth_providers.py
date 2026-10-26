@@ -4,8 +4,9 @@ Supports Google and GitHub OAuth 2.0 for social login.
 To add more providers, register them here with their OAuth endpoints.
 """
 
-from authlib.integrations.starlette_client import OAuth
 import os
+
+from authlib.integrations.starlette_client import OAuth
 
 # Initialize OAuth registry
 oauth = OAuth()
