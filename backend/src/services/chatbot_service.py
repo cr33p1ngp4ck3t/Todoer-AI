@@ -3,6 +3,7 @@
 This module coordinates the LLM providers, MCP tools, and conversation
 management to provide a unified chatbot interface with streaming support.
 """
+
 import json
 import asyncio
 from typing import AsyncIterator, Dict, Any, List, Optional, Tuple
@@ -81,19 +82,31 @@ Remember: You have access to the user's actual task data through your tools."""
             Tuple of (client, provider_type)
         """
         # Get primary and fallback configs
-        primary_config, fallback_config = self.provider_manager.get_primary_with_fallback()
+        primary_config, fallback_config = (
+            self.provider_manager.get_primary_with_fallback()
+        )
 
         if primary_config is None:
-            raise ValueError("No LLM provider is configured. Please set GROQ_API_KEY or GEMINI_API_KEY.")
+            raise ValueError(
+                "No LLM provider is configured. Please set GROQ_API_KEY or GEMINI_API_KEY."
+            )
 
         # Try preferred provider first
-        provider_to_try = preferred_provider or self.provider_manager.get_default_provider()
+        provider_to_try = (
+            preferred_provider or self.provider_manager.get_default_provider()
+        )
 
-        if provider_to_try == LLMProvider.GROQ and primary_config.provider == LLMProvider.GROQ:
+        if (
+            provider_to_try == LLMProvider.GROQ
+            and primary_config.provider == LLMProvider.GROQ
+        ):
             client = await self._create_groq_client(primary_config)
             return client, LLMProvider.GROQ
 
-        if provider_to_try == LLMProvider.GEMINI and primary_config.provider == LLMProvider.GEMINI:
+        if (
+            provider_to_try == LLMProvider.GEMINI
+            and primary_config.provider == LLMProvider.GEMINI
+        ):
             client = self._create_gemini_client(primary_config)
             return client, LLMProvider.GEMINI
 
@@ -160,8 +173,10 @@ Remember: You have access to the user's actual task data through your tools."""
         client, provider = await self.get_provider_client()
 
         try:
-            messages = [{"role": "system", "content": "You are a helpful task parser."},
-                        {"role": "user", "content": prompt}]
+            messages = [
+                {"role": "system", "content": "You are a helpful task parser."},
+                {"role": "user", "content": prompt},
+            ]
 
             # Using simple chat (no stream) for parsing
             response_gen = client.chat(messages=messages, stream=False)
@@ -172,9 +187,9 @@ Remember: You have access to the user's actual task data through your tools."""
                 content = response.choices[0].message.content
             elif provider == LLMProvider.GEMINI:
                 # Gemini structure varies depending on SDK version
-                if hasattr(response, 'text'):
+                if hasattr(response, "text"):
                     content = response.text
-                elif hasattr(response, 'choices'):
+                elif hasattr(response, "choices"):
                     content = response.choices[0].message.content
 
             # Clean JSON string (remove markdown blocks if present)
@@ -187,7 +202,11 @@ Remember: You have access to the user's actual task data through your tools."""
             parsed = json.loads(content)
 
             # Validate priority
-            if "priority" in parsed and parsed["priority"] not in ["low", "medium", "high"]:
+            if "priority" in parsed and parsed["priority"] not in [
+                "low",
+                "medium",
+                "high",
+            ]:
                 parsed["priority"] = "medium"
 
             return parsed
@@ -200,10 +219,10 @@ Remember: You have access to the user's actual task data through your tools."""
                 "description": text,
                 "priority": "medium",
                 "status": "pending",
-                "tags": []
+                "tags": [],
             }
         finally:
-            if hasattr(client, 'close'):
+            if hasattr(client, "close"):
                 await client.close()
 
     async def chat(
@@ -260,7 +279,7 @@ Remember: You have access to the user's actual task data through your tools."""
             logger.error(f"Chat error: {e}", exc_info=True)
             yield {"error": str(e)}
         finally:
-            if hasattr(client, 'close'):
+            if hasattr(client, "close"):
                 await client.close()
 
     async def _get_or_create_conversation(
@@ -310,10 +329,12 @@ Remember: You have access to the user's actual task data through your tools."""
         recent_messages.reverse()  # Oldest first
 
         for msg in recent_messages:
-            messages.append({
-                "role": msg.role,
-                "content": msg.content,
-            })
+            messages.append(
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                }
+            )
 
         return messages
 
