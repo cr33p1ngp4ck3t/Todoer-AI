@@ -4,12 +4,11 @@ This module provides a client for interacting with Google's Gemini API
 for LLM responses with support for function calling using the new google.genai package.
 """
 
-import asyncio
-import os
-from typing import AsyncIterator, Dict, Any, List, Optional
+import logging
+from typing import Any, AsyncIterator, Dict, List, Optional
+
 import google.generativeai as genai
 from src.services.llm_providers import LLMConfig, LLMProvider
-import logging
 
 logger = logging.getLogger("todo-api")
 
