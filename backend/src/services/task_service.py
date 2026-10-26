@@ -1,11 +1,11 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import or_
 from sqlmodel import Session, select
-from src.models.task import Tag, Task
+from src.models.task import Tag, Task, utcnow
 
 logger = logging.getLogger("todo-api")
 
@@ -84,6 +84,9 @@ class TaskService:
             raise ValueError("title cannot be empty")
         if priority not in VALID_PRIORITIES:
             raise ValueError(f"Invalid priority: {priority}")
+        # shortcut: offset-free dates mean UTC; replace when clients send offsets.
+        if due_date is not None and due_date.utcoffset() is None:
+            due_date = due_date.replace(tzinfo=timezone.utc)
 
         task = Task(
             owner_id=self.user_id,
@@ -140,9 +143,12 @@ class TaskService:
         if priority is not None:
             task.priority = priority
         if due_date is not None:
+            # Apply the same legacy UTC assumption used when creating tasks.
+            if due_date.utcoffset() is None:
+                due_date = due_date.replace(tzinfo=timezone.utc)
             task.due_date = due_date
 
-        task.updated_at = datetime.utcnow()
+        task.updated_at = utcnow()
 
         # Update tags if provided
         if tags is not None:

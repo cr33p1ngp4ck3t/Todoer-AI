@@ -86,3 +86,37 @@ def test_task_ownership(client, headers, db_session):
     )
     assert client.delete(f"/tasks/{task_id}", headers=other_headers).status_code == 404
     assert client.get(f"/tasks/{task_id}", headers=headers).json()["title"] == "Private"
+
+
+@pytest.mark.parametrize("operation", ["create", "update"])
+@pytest.mark.parametrize(
+    "due_date,expected",
+    [
+        ("2026-11-01T09:30", "2026-11-01T09:30:00+00:00"),
+        ("2026-11-01T09:30:00Z", "2026-11-01T09:30:00+00:00"),
+        ("2026-11-01T09:30:00+05:00", "2026-11-01T04:30:00+00:00"),
+    ],
+)
+def test_due_date_accepts_existing_clients(
+    client, headers, operation, due_date, expected
+):
+    if operation == "create":
+        response = client.post(
+            "/tasks", headers=headers, json={"title": "Deadline", "due_date": due_date}
+        )
+        assert response.status_code == 201
+    else:
+        task_id = client.post(
+            "/tasks", headers=headers, json={"title": "Deadline"}
+        ).json()["id"]
+        response = client.patch(
+            f"/tasks/{task_id}", headers=headers, json={"due_date": due_date}
+        )
+        assert response.status_code == 200
+
+    task = response.json()
+    persisted = client.get(f"/tasks/{task['id']}", headers=headers).json()
+    assert datetime.fromisoformat(task["due_date"]) == datetime.fromisoformat(expected)
+    assert datetime.fromisoformat(persisted["due_date"]) == datetime.fromisoformat(
+        expected
+    )
