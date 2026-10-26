@@ -1,14 +1,20 @@
+import hashlib
+import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from joserfc import jwt
+from joserfc.errors import JoseError
+from joserfc.jwk import OctKey
 from passlib.context import CryptContext
 from sqlmodel import Session, select
-from src.models.user import User
 from src.lib.database import get_session
-import os
+from src.models.refresh_token import RefreshToken
+from src.models.user import User
 
 # Password hashing context - using argon2 for security and compatibility
 pwd_context = CryptContext(
@@ -20,7 +26,10 @@ pwd_context = CryptContext(
 )
 
 # JWT Configuration (read from environment variables)
-SECRET_KEY = os.getenv("SECRET_KEY", "ehf2938eny12830bcy12")
+SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    raise RuntimeError("Set SECRET_KEY to a random secret before starting the API")
+JWT_KEY = OctKey.import_key(SECRET_KEY)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(
     os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15")
@@ -35,40 +44,21 @@ async def get_current_user(
         HTTPBearer(auto_error=False)
     ),
     session: Session = Depends(get_session),
-) -> Optional[User]:
-    """Extract and validate user from JWT token. Returns None for dev (no auth)."""
-    # Dev mode: allow requests without auth (TODO: remove for production)
-    if credentials is None:
-        # Create/get a default dev user
-        dev_user = session.exec(select(User).where(User.username == "dev_user")).first()
-        if not dev_user:
-            dev_user = User(
-                username="dev_user",
-                email="dev@example.com",
-                hashed_password=get_password_hash("dev123"),
-                is_active=True,
-            )
-            session.add(dev_user)
-            session.commit()
-            session.refresh(dev_user)
-        return dev_user
-
+) -> User:
+    """Extract and validate the authenticated user from a JWT token."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.decode(
-            credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM]
-        )
-        user_id: str
-        sub = payload.get("sub")
-        if sub is None:
-            raise credentials_exception
-        user_id = str(sub)
-    except JWTError:
+    if credentials is None:
         raise credentials_exception
+    try:
+        token = jwt.decode(credentials.credentials, JWT_KEY, algorithms=[ALGORITHM])
+        jwt.JWTClaimsRegistry().validate(token.claims)
+        user_id = UUID(token.claims.get("sub", ""))
+    except (JoseError, ValueError, TypeError) as exc:
+        raise credentials_exception from exc
 
     user = session.get(User, user_id)
     if not user or not user.is_active:
@@ -86,7 +76,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
             minutes=ACCESS_TOKEN_EXPIRE_MINUTES
         )
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode({"alg": ALGORITHM}, to_encode, JWT_KEY, [ALGORITHM])
     return encoded_jwt
 
 
@@ -103,11 +93,6 @@ def needs_rehash(hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """Generate password hash."""
     return pwd_context.hash(password)
-
-
-# Refresh Token Functions
-import secrets
-import hashlib
 
 
 def generate_refresh_token() -> str:
@@ -140,8 +125,8 @@ def create_refresh_token_in_db(
             - plain_token: The unhashed token to return to the client
             - refresh_token_model: The database model with hashed token
     """
+
     from src.models.refresh_token import RefreshToken
-    from datetime import timedelta
 
     # Generate the plain token
     plain_token = generate_refresh_token()
