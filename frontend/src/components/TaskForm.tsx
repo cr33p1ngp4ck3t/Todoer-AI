@@ -157,7 +157,7 @@ export default function TaskForm({
                   required
                 />
                 <p className="mt-2 text-xs italic text-muted-foreground">
-                  Wait, i'll extract the details for you to review.
+                  Wait, I&apos;ll extract the details for you to review.
                 </p>
               </div>
               <Button
