@@ -13,7 +13,7 @@ The user authorized Docker cleanup with an approximately 20 GiB target and expli
 
 Docker/WSL are running after successful compaction. `.cache/docker-compact.log` records DiskPart success. Docker cache retention remains `8GB`; the original host configuration is saved in `.cache/daemon-before-cleanup.json`.
 
-The user now explicitly requests committing all changes in small focused units, with each fix accompanied by its regression tests and mechanical formatting separated. Git metadata is read-only in the sandbox, and the automatic approval service failed before executing the requested staging/commit command. No commit or push has been created in this continuation. The prepared ignored commit sequence is under `.cache/readiness-commits/`; review its manifest before running the helper once Git writes are available.
+All 109 prepared local commits are complete, with fixes accompanied by regression tests and mechanical formatting separated. The helper resumed after correcting PowerShell's nested-array handling, missing new/deleted-file patch headers, and intermediate whitespace. The working tree is clean. No push, tag, or release was created. `.cache/readiness-commits/completed.json` records the exact commit sequence.
 
 ## Completed work
 
@@ -70,7 +70,7 @@ The user now explicitly requests committing all changes in small focused units, 
   - 106 passed
   - 70.36% coverage; threshold is 60%
 - Ruff: all checks passed.
-- Black: all source/test files match Black's Python 3.11 formatting via an in-process check. The CLI stalled inside the sandbox; an elevated retry was rejected by the automatic approval service before execution.
+- Black CLI: 39 files unchanged; Ruff: all checks passed on the committed source/test state.
 - `pip-audit --disable-pip --require-hashes`: no known vulnerabilities.
 - Dependency residue scan: no `python-jose`, `ecdsa`, or `rsa` entries.
 - The current backend virtual environment still runs Python 3.12.13.
@@ -142,7 +142,7 @@ The formerly blocked checks have now completed on the isolated ports documented 
 
 ## First actions for the next chat
 
-The host/storage and live Compose work below is complete. The remaining local action is executing the prepared focused commit sequence after Git metadata writes are permitted. Review `.cache/readiness-commits/manifest.json` and run `.cache/commit-readiness.ps1`; its patch/state checks prevent staging unrelated changes. Do not push, tag, or publish without further user instructions. Hosted CI, a real Kubernetes deployment, and rescoring remain unverified.
+The host/storage, live Compose checks, and focused local commits are complete. Review the local commits before publishing. Hosted CI, a real Kubernetes deployment, and rescoring remain unverified; do not push, tag, or publish without further user instructions.
 
 ### Completed continuation recipe (retain for reproduction)
 
@@ -176,7 +176,7 @@ The host/storage and live Compose work below is complete. The remaining local ac
    ```
 
 6. Re-run the documented backend/frontend gates if any source changes are made, then inspect `git diff --check` and the full diff.
-7. Split the dirty worktree into focused commits rather than one bulk commit. Suggested groups:
+7. The worktree was split into focused commits covering these groups:
    - docs/onboarding and reproducible dependency setup
    - backend tests and security/correctness fixes
    - frontend checks, browser regressions, and API gateway fix
@@ -198,5 +198,5 @@ The host/storage and live Compose work below is complete. The remaining local ac
 - No Tailwind 4 migration.
 - No Gemini SDK migration.
 - No Docker global prune/reset or deletion of unrelated volumes/images.
-- No commit, push, PR, tag, or release.
+- No push, PR, tag, or release.
 - No fabricated maintenance history.
