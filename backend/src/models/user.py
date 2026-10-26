@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List
 from uuid import UUID, uuid4
-from sqlmodel import SQLModel, Field, Relationship
+
+from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from .task import Task
     from .conversation import Conversation
+    from .task import Task
 
 
 def utcnow():
