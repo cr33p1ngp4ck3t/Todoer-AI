@@ -12,6 +12,7 @@ from src.lib.database import get_session
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
+
 # Schemas
 class TaskCreate(BaseModel):
     title: str
@@ -20,6 +21,7 @@ class TaskCreate(BaseModel):
     due_date: Optional[datetime] = None
     tags: Optional[List[str]] = None
 
+
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
@@ -27,6 +29,7 @@ class TaskUpdate(BaseModel):
     priority: Optional[str] = None
     due_date: Optional[datetime] = None
     tags: Optional[List[str]] = None
+
 
 class TaskResponse(BaseModel):
     id: UUID
@@ -42,6 +45,7 @@ class TaskResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 @router.get("", response_model=List[TaskResponse])
 async def list_tasks(
@@ -88,6 +92,7 @@ async def list_tasks(
         for t in tasks
     ]
 
+
 @router.post("", response_model=TaskResponse, status_code=201)
 async def create_task(
     task: TaskCreate,
@@ -119,6 +124,7 @@ async def create_task(
         updated_at=created.updated_at.isoformat(),
     )
 
+
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task(
     task_id: UUID,
@@ -144,6 +150,7 @@ async def get_task(
         created_at=task.created_at.isoformat(),
         updated_at=task.updated_at.isoformat(),
     )
+
 
 @router.patch("/{task_id}", response_model=TaskResponse)
 async def update_task(
@@ -180,6 +187,7 @@ async def update_task(
         created_at=updated.created_at.isoformat(),
         updated_at=updated.updated_at.isoformat(),
     )
+
 
 @router.delete("/{task_id}", status_code=204)
 async def delete_task(
