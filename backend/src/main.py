@@ -28,12 +28,16 @@ async def lifespan(app: FastAPI):
     # Validate database connection at startup
     try:
         from src.lib.database import engine, Session
+
         with Session(engine) as session:
             session.exec(select(1))
         logger.info("Database connection validated successfully")
         print("Database connection validated")  # Visible confirmation
     except Exception as e:
-        logger.error(f"Database connection failed at startup: {type(e).__name__}: {e}", exc_info=True)
+        logger.error(
+            f"Database connection failed at startup: {type(e).__name__}: {e}",
+            exc_info=True,
+        )
         print(f"FATAL: Database connection failed: {e}")
         raise  # Fail fast - don't start server with bad database
 
@@ -69,11 +73,14 @@ def root():
         "health": "/health",
     }
 
+
 # CORS middleware for frontend communication
 # Load CORS origins from environment variable (comma-separated)
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000")
 # Parse and strip quotes for robustness
-cors_origins_list = [origin.strip().replace('"', "") for origin in cors_origins.split(",")]
+cors_origins_list = [
+    origin.strip().replace('"', "") for origin in cors_origins.split(",")
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,19 +96,24 @@ app.include_router(users.router)
 
 # Import and include token refresh router
 from src.api import token_refresh
+
 app.include_router(token_refresh.router)
 
 # Import and include OAuth router
 from src.api import oauth
+
 app.include_router(oauth.router)
 
 # Import and include Chat router
 from src.api import chat
+
 app.include_router(chat.router)
 
 # Import and include Conversations router
 from src.api import conversations
+
 app.include_router(conversations.router)
+
 
 @app.get("/health")
 def health_check():
