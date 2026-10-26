@@ -75,11 +75,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }
 
-  const setTokens = (accessToken: string, refreshToken: string) => {
-    localStorage.setItem('access_token', accessToken)
-    localStorage.setItem('refresh_token', refreshToken)
-    refreshUser()
-  }
+  const setTokens = useCallback(
+    (accessToken: string, refreshToken: string) => {
+      localStorage.setItem('access_token', accessToken)
+      localStorage.setItem('refresh_token', refreshToken)
+      refreshUser()
+    },
+    [refreshUser]
+  )
 
   return (
     <AuthContext.Provider

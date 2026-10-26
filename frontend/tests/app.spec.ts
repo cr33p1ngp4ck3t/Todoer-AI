@@ -148,3 +148,9 @@ test('login displays server errors and allows another attempt', async ({
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'My Tasks' })).toBeVisible()
 })
+
+test('OAuth login uses the same-origin API gateway', async ({ page }) => {
+  await page.goto('/login')
+  await page.getByRole('button', { name: 'Continue with GitHub' }).click()
+  await expect(page).toHaveURL(/\/api\/auth\/oauth\/github$/)
+})

@@ -4,6 +4,15 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '../../../contexts/AuthContext'
 
+function getErrorMessage(errorCode: string): string {
+  const errorMessages: Record<string, string> = {
+    unsupported_provider: 'OAuth provider not supported',
+    oauth_failed: 'OAuth authentication failed',
+    account_inactive: 'Your account is inactive',
+  }
+  return errorMessages[errorCode] || 'OAuth authentication failed'
+}
+
 function OAuthCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -50,15 +59,6 @@ function OAuthCallbackContent() {
 
     handleCallback()
   }, [searchParams, router, setTokens])
-
-  const getErrorMessage = (errorCode: string): string => {
-    const errorMessages: Record<string, string> = {
-      unsupported_provider: 'OAuth provider not supported',
-      oauth_failed: 'OAuth authentication failed',
-      account_inactive: 'Your account is inactive',
-    }
-    return errorMessages[errorCode] || 'OAuth authentication failed'
-  }
 
   if (error) {
     return (

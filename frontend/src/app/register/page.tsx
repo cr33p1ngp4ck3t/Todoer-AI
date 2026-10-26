@@ -52,8 +52,11 @@ export default function RegisterPage() {
 
   const handleOAuthLogin = (provider: string) => {
     // Redirect to backend OAuth endpoint
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-    window.location.href = `${apiUrl}/auth/oauth/${provider}`
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api'
+    window.location.href = new URL(
+      `${apiUrl}/auth/oauth/${provider}`,
+      window.location.origin
+    ).href
   }
 
   return (
