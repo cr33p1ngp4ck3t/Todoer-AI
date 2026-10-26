@@ -3,8 +3,9 @@
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
-from sqlmodel import SQLModel, Field, Relationship, Column
+
 from sqlalchemy import Text
+from sqlmodel import Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from .conversation import Conversation
