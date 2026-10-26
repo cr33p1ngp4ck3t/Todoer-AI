@@ -82,7 +82,11 @@ export default function ProductivityChart({ tasks }: ProductivityChartProps) {
                 {chartData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.isToday ? 'hsl(var(--chart-primary))' : 'hsl(var(--chart-secondary))'}
+                    fill={
+                      entry.isToday
+                        ? 'hsl(var(--chart-primary))'
+                        : 'hsl(var(--chart-secondary))'
+                    }
                   />
                 ))}
               </Bar>
