@@ -10,8 +10,6 @@ keywords:
   - dapr
   - kafka
   - event-driven
-home: https://github.com/AgenticAI/todo-list
+home: https://github.com/cr33p1ngp4ck3t/todo-app
 sources:
-  - https://github.com/AgenticAI/todo-list
-maintainers:
-  - name: AgenticAI Team
+  - https://github.com/cr33p1ngp4ck3t/todo-app
