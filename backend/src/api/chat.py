@@ -1,20 +1,19 @@
 """Chat API endpoints with SSE streaming support."""
 
 import json
-import asyncio
+import logging
 from typing import AsyncIterator
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.responses import StreamingResponse
-from sse_starlette.sse import EventSourceResponse
-from sqlmodel import Session
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlmodel import Session
+from src.api.auth import get_current_user
 from src.lib.database import get_session
+from src.models.user import User
 from src.services.chatbot_service import ChatbotService
 from src.services.mcp_server import MCPToolHandler
-from src.models.user import User
-from src.api.auth import get_current_user
-import logging
+from sse_starlette.sse import EventSourceResponse
 
 logger = logging.getLogger("todo-api")
 router = APIRouter(prefix="/api/chat", tags=["chat"])
