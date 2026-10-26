@@ -1,6 +1,7 @@
-from dapr.clients import DaprClient
-from typing import Dict, Any
 import json
+from typing import Any, Dict
+
+from dapr.clients import DaprClient
 
 
 class KafkaProducer:
