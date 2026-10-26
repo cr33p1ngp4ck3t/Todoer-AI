@@ -1,4 +1,5 @@
 """Conversation management API endpoints."""
+
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
 class ConversationResponse(BaseModel):
     """Conversation response model."""
+
     id: UUID
     title: Optional[str]
     created_at: datetime
@@ -27,6 +29,7 @@ class ConversationResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     """Message response model."""
+
     id: UUID
     role: str
     content: str
@@ -36,6 +39,7 @@ class MessageResponse(BaseModel):
 
 class CreateConversationRequest(BaseModel):
     """Request to create a new conversation."""
+
     title: Optional[str] = None
 
 
@@ -72,19 +76,20 @@ async def list_conversations(
     results = []
     for conv in conversations:
         # Count messages
-        count_query = (
-            select(func.count(Message.id))
-            .where(Message.conversation_id == conv.id)
+        count_query = select(func.count(Message.id)).where(
+            Message.conversation_id == conv.id
         )
         message_count = session.exec(count_query).one()
 
-        results.append(ConversationResponse(
-            id=conv.id,
-            title=conv.title,
-            created_at=conv.created_at,
-            updated_at=conv.updated_at,
-            message_count=message_count,
-        ))
+        results.append(
+            ConversationResponse(
+                id=conv.id,
+                title=conv.title,
+                created_at=conv.created_at,
+                updated_at=conv.updated_at,
+                message_count=message_count,
+            )
+        )
 
     return results
 
@@ -142,7 +147,9 @@ async def get_conversation_messages(
     ]
 
 
-@router.post("", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_conversation(
     request: CreateConversationRequest,
     current_user: User = Depends(get_current_user),
