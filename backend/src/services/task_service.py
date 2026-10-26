@@ -12,6 +12,7 @@ logger = logging.getLogger("todo-api")
 VALID_PRIORITIES = {"low", "medium", "high"}
 VALID_STATUSES = {"pending", "completed"}
 
+
 class TaskService:
     """Business logic for task operations with user isolation."""
 
@@ -33,10 +34,7 @@ class TaskService:
         if search:
             search_term = f"%{search}%"
             query = query.where(
-                or_(
-                    Task.title.ilike(search_term),
-                    Task.description.ilike(search_term)
-                )
+                or_(Task.title.ilike(search_term), Task.description.ilike(search_term))
             )
 
         if status and status in VALID_STATUSES:
@@ -50,11 +48,12 @@ class TaskService:
             # Sort by priority (high to low), then by created_at descending
             # Using case expression for proper priority ordering
             from sqlalchemy import case
+
             priority_case = case(
                 (Task.priority == "high", 0),
                 (Task.priority == "medium", 1),
                 (Task.priority == "low", 2),
-                else_=3
+                else_=3,
             )
             query = query.order_by(priority_case, Task.created_at.desc())
         else:
