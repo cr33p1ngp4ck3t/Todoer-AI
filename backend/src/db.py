@@ -1,11 +1,15 @@
-from sqlmodel import create_engine, SQLModel
 import os
+
+from sqlmodel import SQLModel, create_engine
+from src.lib.database_url import use_installed_postgres_driver
 
 # Deprecated: This file is kept for backward compatibility only.
 # Use src.lib.database for all session management.
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
-engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+engine = create_engine(
+    use_installed_postgres_driver(DATABASE_URL), echo=False, pool_pre_ping=True
+)
 
 
 def init_db():

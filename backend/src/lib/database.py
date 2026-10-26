@@ -1,4 +1,5 @@
 from sqlmodel import Session, create_engine, SQLModel
+from src.lib.database_url import use_installed_postgres_driver
 from contextlib import contextmanager
 import logging
 import os
@@ -12,7 +13,9 @@ logger = logging.getLogger("todo-api")
 # Database engine - read from environment
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 print(f">>> DATABASE_URL loaded: {DATABASE_URL[:50]}...")  # Debug: show first 50 chars
-engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+engine = create_engine(
+    use_installed_postgres_driver(DATABASE_URL), echo=False, pool_pre_ping=True
+)
 
 
 def get_session():
