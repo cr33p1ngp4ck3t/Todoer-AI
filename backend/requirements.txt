@@ -532,9 +532,9 @@ grpcio==1.85.0 \
     #   dapr
     #   google-api-core
     #   grpcio-status
-grpcio-status==1.71.2 \
-    --hash=sha256:803c98cb6a8b7dc6dbb785b1111aed739f241ab5e9da0bba96888aa74704cfd3 \
-    --hash=sha256:c7a97e176df71cdc2c179cd1847d7fc86cca5832ad12e9798d7fed6b7a1aab50
+grpcio-status==1.84.1 \
+    --hash=sha256:5a1455bf5b39fe2a3d09d71661e59c97622c73888ad11f13109ce82220b88218 \
+    --hash=sha256:690ecf476c82d6d98703a80578cc0ec6d0b5222187f783bd0158abd28396cb42
     # via
     #   dapr
     #   google-api-core
