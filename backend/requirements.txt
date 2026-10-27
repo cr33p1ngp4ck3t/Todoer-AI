@@ -459,9 +459,9 @@ frozenlist==1.8.0 \
     # via
     #   aiohttp
     #   aiosignal
-google-ai-generativelanguage==0.6.15 \
-    --hash=sha256:5a03ef86377aa184ffef3662ca28f19eeee158733e45d7947982eb953c6ebb6c \
-    --hash=sha256:8f6d9dc4c12b065fe2d0289026171acea5183ebf2d0b11cefe12f3821e159ec3
+google-ai-generativelanguage==0.12.1 \
+    --hash=sha256:1a210b7f284465d6e13c4153d58c6ede639e67fec84b85ab984bb74ed4269fb5 \
+    --hash=sha256:f3b3bb9069d0effd787818c0ffc4a1cccf8459d8c8c5b25641d2af0ee4e91c87
     # via google-generativeai
 google-api-core==2.33.0 \
     --hash=sha256:3a36bcc3e319783f4c97da41f6f45ea6ffcaa55848e341de16e09cb70243c2bb \
