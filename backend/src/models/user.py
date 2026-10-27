@@ -22,7 +22,11 @@ class User(SQLModel, table=True):
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utcnow)
 
-    tasks: List["Task"] = Relationship(back_populates="owner", cascade_delete=True)
+    tasks: List["Task"] = Relationship(
+        back_populates="owner",
+        cascade_delete=True,
+        sa_relationship_kwargs={"foreign_keys": "Task.owner_id"},
+    )
     conversations: List["Conversation"] = Relationship(
         back_populates="user", cascade_delete=True
     )

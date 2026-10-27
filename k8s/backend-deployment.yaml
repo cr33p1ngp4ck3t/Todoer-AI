@@ -17,8 +17,10 @@ spec:
       annotations:
         dapr.io/enabled: "false"
     spec:
+      securityContext: {"runAsNonRoot": true, "runAsUser": 1000, "seccompProfile": {"type": "RuntimeDefault"}}
       containers:
       - name: backend
+        securityContext: {"allowPrivilegeEscalation": false, "capabilities": {"drop": ["ALL"]}}
         image: todo-backend:local
         imagePullPolicy: Never
         command: ["uvicorn", "src.main:app"]

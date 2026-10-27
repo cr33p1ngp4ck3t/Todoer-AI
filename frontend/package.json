@@ -9,6 +9,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
+    "test:unit": "node --experimental-strip-types --experimental-test-coverage --test-coverage-include=src/services/api.ts --test-coverage-include=src/lib/task-dates.ts --test-coverage-lines=90 --test-coverage-functions=90 --test-coverage-branches=80 --test tests/unit/*.test.mjs",
     "format:check": "prettier --check .",
     "format": "prettier --write ."
   },

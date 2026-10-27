@@ -1,21 +1,18 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
-
   useEffect(() => {
-    router.push('/dashboard')
+    router.replace('/dashboard')
   }, [router])
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-lime-600"></div>
-        <p className="mt-4 text-gray-600">Loading...</p>
-      </div>
+    <div className="flex min-h-screen items-center justify-center gap-3 text-text-secondary">
+      <Loader2 size={18} className="animate-spin" />
+      Opening your workspace…
     </div>
   )
 }

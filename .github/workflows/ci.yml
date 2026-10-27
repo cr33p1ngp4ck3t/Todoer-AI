@@ -51,6 +51,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run format:check
+      - run: npm run test:unit
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm test
@@ -71,6 +72,17 @@ jobs:
           version: v3.17.3
       - run: helm lint --strict helm/todo-app
       - run: helm template todo helm/todo-app > /tmp/todo-manifests.yaml
+      - name: Validate Kubernetes schemas
+        run: |
+          tool_dir=$(mktemp -d)
+          trap 'rm -rf "$tool_dir"' EXIT
+          release=https://github.com/yannh/kubeconform/releases/download/v0.7.0
+          curl --fail --location "$release/kubeconform-linux-amd64.tar.gz" -o "$tool_dir/kubeconform-linux-amd64.tar.gz"
+          curl --fail --location "$release/CHECKSUMS" -o "$tool_dir/CHECKSUMS"
+          (cd "$tool_dir" && grep 'kubeconform-linux-amd64.tar.gz$' CHECKSUMS | sha256sum --check --strict)
+          tar -xzf "$tool_dir/kubeconform-linux-amd64.tar.gz" -C "$tool_dir" kubeconform
+          # Dapr Components require their own installed CRD schemas; all built-in kinds must validate.
+          "$tool_dir/kubeconform" -strict -summary -kubernetes-version 1.31.0 -skip Component /tmp/todo-manifests.yaml k8s/
       - name: Generate ephemeral local credentials
         run: |
           python - <<'PY'

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlmodel import Session
 from src.api.auth import get_current_user
 from src.lib.database import get_session
+from src.lib.task_draft import SmartParseRequest, TaskDraft
 from src.models.user import User
 from src.services.chatbot_service import ChatbotService
 from src.services.mcp_server import MCPToolHandler
@@ -162,13 +163,7 @@ async def execute_tool_call(
     return result
 
 
-class SmartParseRequest(BaseModel):
-    """Request model for smart task parsing."""
-
-    text: str
-
-
-@router.post("/smart-parse")
+@router.post("/smart-parse", response_model=TaskDraft)
 async def smart_parse_task(
     request: SmartParseRequest,
     current_user: User = Depends(get_current_user),
@@ -184,17 +179,16 @@ async def smart_parse_task(
     Returns:
         Structured task details
     """
-    if not request.text.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty"
-        )
-
     chatbot = ChatbotService(
         user_id=current_user.id,
         session=session,
     )
 
-    result = await chatbot.smart_parse_task(request.text)
+    result = await chatbot.smart_parse_task(
+        request.text,
+        reference_time=request.reference_time,
+        timezone=request.timezone,
+    )
     return result
 
 

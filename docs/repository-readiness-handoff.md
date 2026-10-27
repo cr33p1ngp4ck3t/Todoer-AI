@@ -1,11 +1,65 @@
 # Repository readiness handoff
 
-Date: 2026-10-26
+## Public Render verification and build failure — 2026-10-27
+
+User supplied https://todo-app-backend-odmr.onrender.com/ and then the Docker dependency-resolution failure. Read-only Playwright checks succeeded: `/`, `/health/ready`, and `/health/live` returned HTTP 200 with the expected API information, `ready`, and `alive`. `/openapi.json` was readable and advertised `Todo System API` version `1.0.0`. The version string does not identify a deployed commit.
+
+The live schema is older than the local workspace implementation: no `/projects` routes or `/tasks/export` and `/tasks/import`; task create/update/response schemas omit recurrence and assignment fields; `SmartParseRequest` exposes only `text`. Deploying the new frontend against this API will leave workspace features unavailable. Do not infer database schema readiness from the health endpoints, which only establish connectivity.
+
+The supplied Docker log confirms the previously identified requirements conflict: `google-generativeai 0.8.6` requires `google-ai-generativelanguage==0.6.15`, while the incoming requirements export pins `0.12.1`. The local runtime requirements are already compatible. A fresh offline locked export matched every requirement and hash, excluding its generated-command header; installed SDK metadata confirmed the exact Google dependency requirement. Related restored pins are grpcio-status 1.71.2, proto-plus 1.28.2, protobuf 5.29.6, and bcrypt 4.0.1. All 21 focused auth/infrastructure/dependency tests passed again.
+
+README now records the actual backend origin, Docker-build evidence, verified public API limitations, and runtime export command. The existing [correction patch](incoming-dependency-fixes.patch) remains based on `origin/main` at `079e4aa`; reconcile it into the revision Render builds without overwriting the uncommitted workspace implementation. No new dependency upgrades, Git integration, push, deployment, or production mutation were performed. A local Docker rebuild was unavailable because the Docker daemon is not running. Database type/schema, deployed commit, authenticated operations, frontend CORS, and migrations remain unverified.
+
+## Render and incoming dependency review — 2026-10-27
+
+User confirmed the backend runs on Render and reported a GitHub pull with questionable fixes. Inspected the fetched range `33e505c..079e4aa`: 35 incoming commits change dependency manifests, images and CI actions. Local HEAD remains `33e505c` with the uncommitted workspace implementation; `origin/main` alone advanced. No incoming application-source changes exist in that range.
+
+Confirmed incoming Docker Python/package-path mismatch, four requirements/lock discrepancies, ESLint plugin peer conflicts and TypeScript parser peer conflicts. A bcrypt 5 compatibility reproduction using its length-rejection contract also makes Passlib's legacy probe fail; an actual bcrypt 5 installation was not available. The current local compatible dependency graph was retained. Local Docker now copies `/usr/local` between identical Python images to prevent version-specific copy failures. Added three backend manifest/compatibility regressions, one frontend locked-peer regression, and targeted Dependabot exclusions.
+
+Created [incoming-dependency-fixes.patch](incoming-dependency-fixes.patch), explicitly based on remote commit `079e4aa`. Applied it only to ignored copies of the remote files under `.cache/incoming-review` and verified the correction contracts there. It has not been applied over the dirty workspace or merged into Git history. It restores the known tested frontend lock as a unit; incoming Radix/lucide dependency upgrades are deferred. Incoming Node-image and GitHub Actions changes remain in that artifact and require live build/hosted-CI verification.
+
+Latest focused checks: 21 backend auth/infrastructure/dependency tests passed; 17 frontend unit tests passed with the existing API/date coverage gate; lint, Prettier and Ruff passed; Black formatting API passed the new Python test. The full 157-test backend and 17-scenario browser results below predate these manifest-only corrections. No unnecessary UI/build rerun was required because application source and installed dependencies were unchanged.
+
+Added a Render section to README covering native build/start, direct browser API URL/CORS, explicit database migrations and persistence. The URL and Docker-build evidence were subsequently supplied and public checks succeeded as recorded above; database/deployed revision remain unknown. Earlier automatic approval review returned content-blocked on public Render/bcrypt metadata requests; an offline incoming npm install stopped with ENOTCACHED after reporting peer overrides. No remote merge, push, Render deployment or real database mutation occurred.
+
+Next action: review the correction artifact in a checkout at the specified remote commit, then reconcile the local feature work without resetting it. Confirm the Render deployed revision/runtime/database and upgrade the existing schema before serving the workspace API.
+
+## Workspace upgrade continuation — 2026-10-27
+
+This section supersedes the older readiness metrics below for the current working tree. The earlier Compose and Helm evidence belongs to the preceding readiness pass, not this feature change.
+
+Delivered all five requested upgrades: correct sorting/nullable edits/local deadlines, validated AI drafts with preview/fallback, daily/weekly/monthly recurrence, atomic personal JSON backups, and shared projects with invitation acceptance/assignments/owner-editor-viewer permissions. Rebuilt the dashboard, account screens, editors, task rows and theme. Added frontend API/date unit coverage and CI; strict Kubernetes schema validation and pod-policy checks are also in place.
+
+Final local evidence:
+
+- `backend/.venv/Scripts/python.exe -m pytest` from the root: 157 passed, 77.74% backend coverage (60% threshold). Migration tests preserve existing rows, permit reapplication, reverse the new fields, and roll back interrupted SQLite DDL.
+- Ruff checks pass across backend source/tests and migration 010. Black's CLI stalled without completion; Black's `format_file_contents(fast=False)` verified all 50 source/test/new-migration files unchanged using PY311/88-column settings and AST safety, exit 0.
+- Frontend build, lint/typecheck and Prettier pass. 16 Node unit tests pass, with 100% lines/functions and 98.31% branches across `api.ts` and `task-dates.ts`; this is not component-wide coverage. 17 Chromium browser tests pass in 33.2s. A focused rerun also passed the enlarged-backup regression using a valid JSON file over the old 2 MB limit.
+- All 26 raw Kubernetes resources and CI YAML parse with existing js-yaml. App pod policies match backend UID 1000/frontend UID 1001 and disable privilege escalation/drop all capabilities. Actual kubeconform schemas and latest Helm rendering were not executed locally; downloads failed automatic approval review with internal/content-blocked errors. CI pins kubeconform 0.7.0 with checksum verification and Kubernetes 1.31 schemas, explicitly skipping Dapr Component CRDs.
+- Playwright screenshots reviewed at 1440x1000 desktop and 390x844 mobile, light/dark, with a populated dashboard and task form. No horizontal overflow or framework overlay in checked states. The first login console had a missing-favicon 404; added the app icon. No page exceptions during task CRUD. Later interactive MCP commands were blocked by automatic approval review; configured Playwright regression tests completed successfully.
+
+Database upgrade is required **before starting the new API against existing tables**. Back up and stop serving first. From `backend/` with the same explicit DATABASE_URL: use `uv run --locked alembic upgrade head` for versioned databases, or `uv run --locked python -m src.lib.migrate_workspace` for known legacy unversioned create_all databases. The helper refuses versioned/unknown/partial schemas and applies only 010 without stamping old history. New empty databases still initialize on startup. Downgrade discards new project/recurrence/import metadata; a full database backup is the recovery source. See README for complete instructions and the Helm migration-baseline caveat.
+
+Review fixed delayed-save reload races, creation-dialog dismissal during pending requests, hidden mobile navigation focus, mixed-case registered invitations, monthly anchors on unchanged edits, and legacy UTC parsing. Browser imports permit 20 MB and 1000 tasks; existing and previously imported source IDs are skipped, including after deleting an imported copy. Personal backups omit shared tasks/assignments and receive new task IDs/timestamps when imported.
+
+Remaining checks: live providers/OAuth/microphone, PostgreSQL migration/concurrent completion, latest Compose/Helm/kubeconform and real Kubernetes deployment, hosted CI. Gemini's deprecated/broken SDK integration needs its own migration; asynchronous timeout does not bound blocking SDK calls. Raw Dapr statestore and Grafana examples still contain development credential defaults and need Secret configuration before deployment. No push, commit, release, deployment, fabricated attribution or real-database mutation was performed during this continuation. A repository payout increase has not been measured or promised.
+
+Current first action: review the working diff, take the correct database upgrade path, and run hosted/deployment gates when publishing is authorized. The requested implementation and local feature checks are complete.
+
+Date: 2026-10-27
 Workspace: `D:\todo-app`
 Branch: `main`
 Goal: improve the repository-quality score through reproducible setup, CI, tests, documentation, dependency security, Compose, and Kubernetes/Helm hardening.
 
 ## Current state
+
+On 2026-10-27, the user supplied the DataFactor evaluation: 73/100, grade B, with an estimated $80 payout. Frontend, backend, and infrastructure dimension scores were 64.7, 67.1, and 58.2; estimated task capacity was about 13. The evaluation is static analysis and does not execute the repository. DataFactor's terms describe scores and payouts as approximate, non-binding estimates, not an offer or commitment.
+
+The user renamed the GitHub repository to `cr33p1ngp4ck3t/Todoer-AI`. A read-only browser check confirmed the old URL redirects to the new one. README and Helm chart source links now use the canonical URL; existing chart paths and Kubernetes resource identifiers retain their compatibility.
+
+Review of the feedback confirmed that frontend unit tests and stronger manifest validation are useful follow-ups. JSON logging is already wired through `backend/src/lib/logging.py` and `backend/src/main.py`; `DATABASE_URL` and `ACCESS_TOKEN_EXPIRE_MINUTES` are already in `backend/.env.example`. Microsoft OAuth remains unimplemented, and `CI` and `PYTHON_DOTENV_DISABLED` are test controls rather than missing runtime secrets. Those findings do not justify adding an unused logging dependency or Microsoft credentials.
+
+The user asked about multiple GitHub accounts. Accounts belonging to one person remain one human contributor. Preserve accurate author attribution; grow the useful history through real behavior changes with regression tests and actual collaboration.
 
 Repository readiness work is implemented. The backend, frontend, dependency, Helm, YAML, shell, static configuration, and live Docker Compose smoke gates pass locally. The storage blocker was resolved by offline VHD compaction and a fresh image build.
 
@@ -13,7 +67,7 @@ The user authorized Docker cleanup with an approximately 20 GiB target and expli
 
 Docker/WSL are running after successful compaction. `.cache/docker-compact.log` records DiskPart success. Docker cache retention remains `8GB`; the original host configuration is saved in `.cache/daemon-before-cleanup.json`.
 
-All 109 prepared local commits are complete, with fixes accompanied by regression tests and mechanical formatting separated. The helper resumed after correcting PowerShell's nested-array handling, missing new/deleted-file patch headers, and intermediate whitespace. The working tree is clean. No push, tag, or release was created. `.cache/readiness-commits/completed.json` records the exact commit sequence.
+All 109 prepared local commits are complete, with fixes accompanied by regression tests and mechanical formatting separated. The helper resumed after correcting PowerShell's nested-array handling, missing new/deleted-file patch headers, and intermediate whitespace. The working tree was clean when that pass finished. The current continuation updates documentation and chart metadata; no push, tag, or release was created by this agent. `.cache/readiness-commits/completed.json` records the exact commit sequence.
 
 ## Completed work
 
@@ -137,12 +191,12 @@ The formerly blocked checks have now completed on the isolated ports documented 
 
 - Hosted GitHub Actions have not run because nothing was pushed.
 - No real Kubernetes cluster installation was attempted.
-- The repository has not been rescored.
+- The user-provided evaluation reports 73/B and a non-binding $80 estimate. The feedback was reviewed against the code; no new scoring run was requested.
 - No release/tag was created.
 
 ## First actions for the next chat
 
-The host/storage, live Compose checks, and focused local commits are complete. Review the local commits before publishing. Hosted CI, a real Kubernetes deployment, and rescoring remain unverified; do not push, tag, or publish without further user instructions.
+The host/storage, live Compose checks, and focused local commits are complete. Further readiness work should focus on meaningful frontend API-client regression tests and validation of rendered Kubernetes manifests. These checks have not been added during the payout-research continuation. Review local changes before publishing. Hosted CI and a real Kubernetes deployment remain unverified; do not push, tag, or publish without further user instructions.
 
 ### Completed continuation recipe (retain for reproduction)
 
