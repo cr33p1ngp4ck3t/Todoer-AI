@@ -1,5 +1,13 @@
 # Repository readiness handoff
 
+## Applied dependency correction after merge — 2026-10-27
+
+The latest user-supplied Docker failure triggered another state check. Local HEAD and `origin/main` have advanced to `4ca7e93861f999ae65728a531d3339e6e6c929c0`; the workspace implementation is now committed through `1a91271`, but its merge reintroduced the incompatible dependency files. The actual working tree was clean and regression checks failed on four requirements/lock discrepancies, the bcrypt constraint, and unsupported ESLint plugin peers. Earlier statements that local manifests were compatible describe the pre-merge state.
+
+Applied the corrections directly to `backend/pyproject.toml`, `backend/uv.lock`, `backend/requirements.txt`, `frontend/package.json`, and `frontend/package-lock.json`. Restored bcrypt 4.0.1 with `<4.1`, regenerated the hashed runtime export, and restored the tested frontend graph with ESLint 9.39.2 and TypeScript 5.9.3. Retained the workspace implementation and its frontend coverage command. Incoming Docker/CI/image changes were preserved; Docker already copies `/usr/local` and needed no edit.
+
+All 21 focused backend tests and 17 frontend unit tests pass again, as do frontend lint and typechecking. Complete runtime export/hash and installed SDK contract checks pass. Regenerated [incoming-dependency-fixes.patch](incoming-dependency-fixes.patch) against the exact current merge commit; it now contains only the five dependency-file changes, already applied locally. Commit/push these corrections and deploy that corrected revision; production remains unchanged and the existing database migration still requires preparation. The earlier full application verification applies to the retained source and compatible installed dependency versions, not to the new container images or hosted CI.
+
 ## Public Render verification and build failure — 2026-10-27
 
 User supplied https://todo-app-backend-odmr.onrender.com/ and then the Docker dependency-resolution failure. Read-only Playwright checks succeeded: `/`, `/health/ready`, and `/health/live` returned HTTP 200 with the expected API information, `ready`, and `alive`. `/openapi.json` was readable and advertised `Todo System API` version `1.0.0`. The version string does not identify a deployed commit.

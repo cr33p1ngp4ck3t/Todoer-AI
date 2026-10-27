@@ -108,7 +108,7 @@ The reported Docker build failure comes from incoming `requirements.txt` drift: 
 uv export --project backend --locked --no-dev --no-emit-project --output-file backend/requirements.txt
 ```
 
-The current local export already matches that lock, including hashes. [The incoming dependency review](docs/incoming-dependency-review.md) provides a correction against remote commit `079e4aa`, covering the stale export, legacy bcrypt constraint, and Docker package-copy path. It must be reconciled into the revision Render builds; local files alone do not repair a remote deployment.
+The current local export matches that compatible lock, including hashes. Merge `4ca7e93` reintroduced the conflicting files; they have now been corrected directly in the working tree. [The incoming dependency review](docs/incoming-dependency-review.md) includes a five-file correction patch against that exact merge commit. Commit/push the corrected backend manifest/lock/export and frontend manifest/lock, then deploy the corrected revision. Local files alone do not repair a GitHub-backed Render build. The Docker package-copy fix and dependency regression checks already exist in the merge commit.
 
 ## Configuration
 
