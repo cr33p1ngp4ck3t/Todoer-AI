@@ -1,6 +1,7 @@
 import { AuthProvider } from '../contexts/AuthContext'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '../components/ui/sonner'
+import { Analytics } from '@vercel/analytics/next'
 import '@/app/styles/globals.css'
 
 export const metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({
           <AuthProvider>{children}</AuthProvider>
           <Toaster />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   )
