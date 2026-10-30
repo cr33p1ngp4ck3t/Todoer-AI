@@ -218,10 +218,7 @@ export const api = {
   ping: {
     keepAlive: async (): Promise<void> => {
       try {
-        await fetch(`${API_URL}/tasks`, {
-          method: 'HEAD',
-          headers: new Headers(),
-        })
+        await api.health.check()
       } catch (error) {
         // Silent fail - don't alert users about ping failures
         console.debug('Ping failed:', error)

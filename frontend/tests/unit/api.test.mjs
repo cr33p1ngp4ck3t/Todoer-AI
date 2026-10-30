@@ -272,3 +272,27 @@ test('health checks and server-side calls need no browser storage', async () => 
   )
   await assert.rejects(api.tasks.list(), /Session expired/)
 })
+
+test('keep-alive uses the public health endpoint without credentials', async () => {
+  let sent
+  mock.method(globalThis, 'fetch', async (url, options) => {
+    sent = { url, options }
+    return Response.json({ status: 'healthy' })
+  })
+  await api.ping.keepAlive()
+  assert.equal(sent.url, '/api/health')
+  assert.equal(sent.options.method, undefined)
+  assert.equal(sent.options.headers.Authorization, undefined)
+  assert.equal(tokens.size, 2)
+  assert.equal(browser.location.href, '')
+})
+
+test('keep-alive failures do not clear the session or reject', async () => {
+  mock.method(globalThis, 'fetch', async () => {
+    throw new Error('Backend unavailable')
+  })
+  mock.method(console, 'debug', () => {})
+  await api.ping.keepAlive()
+  assert.equal(tokens.size, 2)
+  assert.equal(browser.location.href, '')
+})

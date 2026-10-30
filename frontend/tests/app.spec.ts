@@ -43,6 +43,11 @@ test.beforeEach(async ({ page }) => {
       await route.fulfill({ status: 204, headers })
       return
     }
+    if (apiPath === '/health') {
+      expect(request.headers().authorization).toBeUndefined()
+      await route.fulfill({ json: { status: 'healthy' }, headers })
+      return
+    }
     if (apiPath === '/auth/oauth/github') {
       await route.fulfill({
         status: 200,
