@@ -1,6 +1,8 @@
 import { AuthProvider } from '../contexts/AuthContext'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '../components/ui/sonner'
+import { KeepAlivePing } from '../components/KeepAlivePing'
+import { Analytics } from '@vercel/analytics/next'
 import '@/app/styles/globals.css'
 
 export const metadata = {
@@ -18,9 +20,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <KeepAlivePing />
           <AuthProvider>{children}</AuthProvider>
           <Toaster />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   )

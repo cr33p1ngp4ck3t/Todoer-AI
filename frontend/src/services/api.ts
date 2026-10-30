@@ -214,6 +214,21 @@ export const api = {
         }),
       }),
   },
+
+  ping: {
+    keepAlive: async (): Promise<void> => {
+      try {
+        await fetch(`${API_URL}/tasks`, {
+          method: 'HEAD',
+          headers: new Headers(),
+        })
+      } catch (error) {
+        // Silent fail - don't alert users about ping failures
+        console.debug('Ping failed:', error)
+      }
+    },
+  },
+
   auth: {
     login: (email: string, password: string): Promise<TokenResponse> =>
       request(
