@@ -3,11 +3,13 @@
 This module defines the tools available to the LLM for task management.
 Each tool has a JSON schema for validation and a handler function.
 """
-from typing import Any, Dict, List, Optional
+
+import logging
+from typing import Any, Dict, List
 from uuid import UUID
+
 from sqlmodel import Session
 from src.services.task_service import TaskService
-import logging
 
 logger = logging.getLogger("todo-api")
 
@@ -25,31 +27,28 @@ MCP_TOOLS = [
                         "type": "string",
                         "description": "Task title (1-255 characters)",
                         "minLength": 1,
-                        "maxLength": 255
+                        "maxLength": 255,
                     },
                     "description": {
                         "type": "string",
                         "description": "Optional task description (max 1000 characters)",
-                        "maxLength": 1000
+                        "maxLength": 1000,
                     },
                     "priority": {
                         "type": "string",
                         "enum": ["low", "medium", "high"],
                         "description": "Task priority level",
-                        "default": "medium"
+                        "default": "medium",
                     },
                     "tags": {
                         "type": "array",
-                        "items": {
-                            "type": "string",
-                            "maxLength": 50
-                        },
-                        "description": "Optional list of tags (lowercase, max 50 chars each)"
-                    }
+                        "items": {"type": "string", "maxLength": 50},
+                        "description": "Optional list of tags (lowercase, max 50 chars each)",
+                    },
                 },
-                "required": ["title"]
-            }
-        }
+                "required": ["title"],
+            },
+        },
     },
     {
         "type": "function",
@@ -63,27 +62,27 @@ MCP_TOOLS = [
                         "type": "string",
                         "enum": ["pending", "completed", "all"],
                         "description": "Filter by task status",
-                        "default": "all"
+                        "default": "all",
                     },
                     "priority": {
                         "type": "string",
                         "enum": ["low", "medium", "high"],
-                        "description": "Filter by priority level"
+                        "description": "Filter by priority level",
                     },
                     "search": {
                         "type": "string",
-                        "description": "Search query for title and description"
+                        "description": "Search query for title and description",
                     },
                     "sort_by": {
                         "type": "string",
                         "enum": ["created_at", "priority"],
                         "description": "Sort order for results",
-                        "default": "created_at"
-                    }
+                        "default": "created_at",
+                    },
                 },
-                "required": []
-            }
-        }
+                "required": [],
+            },
+        },
     },
     {
         "type": "function",
@@ -96,36 +95,33 @@ MCP_TOOLS = [
                     "task_id": {
                         "type": "string",
                         "description": "UUID of the task to update",
-                        "format": "uuid"
+                        "format": "uuid",
                     },
                     "title": {
                         "type": "string",
                         "description": "New task title",
                         "minLength": 1,
-                        "maxLength": 255
+                        "maxLength": 255,
                     },
                     "description": {
                         "type": "string",
                         "description": "New task description",
-                        "maxLength": 1000
+                        "maxLength": 1000,
                     },
                     "priority": {
                         "type": "string",
                         "enum": ["low", "medium", "high"],
-                        "description": "New priority level"
+                        "description": "New priority level",
                     },
                     "tags": {
                         "type": "array",
-                        "items": {
-                            "type": "string",
-                            "maxLength": 50
-                        },
-                        "description": "New tags (replaces all existing)"
-                    }
+                        "items": {"type": "string", "maxLength": 50},
+                        "description": "New tags (replaces all existing)",
+                    },
                 },
-                "required": ["task_id"]
-            }
-        }
+                "required": ["task_id"],
+            },
+        },
     },
     {
         "type": "function",
@@ -138,12 +134,12 @@ MCP_TOOLS = [
                     "task_id": {
                         "type": "string",
                         "description": "UUID of the task to complete",
-                        "format": "uuid"
+                        "format": "uuid",
                     }
                 },
-                "required": ["task_id"]
-            }
-        }
+                "required": ["task_id"],
+            },
+        },
     },
     {
         "type": "function",
@@ -156,12 +152,12 @@ MCP_TOOLS = [
                     "task_id": {
                         "type": "string",
                         "description": "UUID of the task to delete",
-                        "format": "uuid"
+                        "format": "uuid",
                     }
                 },
-                "required": ["task_id"]
-            }
-        }
+                "required": ["task_id"],
+            },
+        },
     },
     {
         "type": "function",
@@ -174,12 +170,12 @@ MCP_TOOLS = [
                     "query": {
                         "type": "string",
                         "description": "Search query string",
-                        "minLength": 1
+                        "minLength": 1,
                     }
                 },
-                "required": ["query"]
-            }
-        }
+                "required": ["query"],
+            },
+        },
     },
     {
         "type": "function",
@@ -193,13 +189,13 @@ MCP_TOOLS = [
                         "type": "string",
                         "description": "Description of the complex task to break down",
                         "minLength": 1,
-                        "maxLength": 1000
+                        "maxLength": 1000,
                     }
                 },
-                "required": ["task_description"]
-            }
-        }
-    }
+                "required": ["task_description"],
+            },
+        },
+    },
 ]
 
 
@@ -267,6 +263,7 @@ class MCPToolHandler:
         # Fetch tags for response
         from sqlmodel import select
         from src.models.task import Tag
+
         tags = self.session.exec(select(Tag).where(Tag.task_id == task.id)).all()
         tag_names = [tag.name for tag in tags]
 
@@ -303,16 +300,18 @@ class MCPToolHandler:
             tags = self.session.exec(select(Tag).where(Tag.task_id == task.id)).all()
             tag_names = [tag.name for tag in tags]
 
-            task_list.append({
-                "id": str(task.id),
-                "title": task.title,
-                "description": task.description,
-                "status": task.status,
-                "priority": task.priority,
-                "tags": tag_names,
-                "created_at": task.created_at.isoformat(),
-                "updated_at": task.updated_at.isoformat(),
-            })
+            task_list.append(
+                {
+                    "id": str(task.id),
+                    "title": task.title,
+                    "description": task.description,
+                    "status": task.status,
+                    "priority": task.priority,
+                    "tags": tag_names,
+                    "created_at": task.created_at.isoformat(),
+                    "updated_at": task.updated_at.isoformat(),
+                }
+            )
 
         return {
             "tasks": task_list,
@@ -338,6 +337,7 @@ class MCPToolHandler:
         # Fetch tags for response
         from sqlmodel import select
         from src.models.task import Tag
+
         tags = self.session.exec(select(Tag).where(Tag.task_id == task.id)).all()
         tag_names = [tag.name for tag in tags]
 

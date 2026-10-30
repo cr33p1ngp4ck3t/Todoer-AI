@@ -1,15 +1,19 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID, uuid4
-from sqlmodel import SQLModel, Field
+
+from sqlmodel import Field, SQLModel
+
 
 def utcnow():
     """Return current UTC datetime."""
     return datetime.now(timezone.utc)
 
+
 def refresh_token_expires():
     """Return expiration time for refresh token (30 days from now)."""
     return datetime.now(timezone.utc) + timedelta(days=30)
+
 
 class RefreshToken(SQLModel, table=True):
     """Refresh token for JWT token rotation.
@@ -24,6 +28,7 @@ class RefreshToken(SQLModel, table=True):
     - Expired tokens should be cleaned up periodically
     - One user can have multiple active refresh tokens (multiple devices)
     """
+
     __tablename__: str = "refresh_token"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)

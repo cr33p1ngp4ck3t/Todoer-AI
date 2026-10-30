@@ -24,13 +24,13 @@ export default function SearchBar({
 
   return (
     <div className="relative">
-      <Search className="absolute top-2.5 left-3 h-4 w-4 text-text-muted" />
+      <Search className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
       <Input
         type="text"
         value={inputValue}
         onChange={(e) => handleChange(e.target.value)}
         placeholder="Search tasks..."
-        className="border border-border bg-card pr-10 pl-10"
+        className="border border-border bg-card pl-10 pr-10"
         aria-label="Search tasks"
       />
       {inputValue && (
@@ -39,7 +39,7 @@ export default function SearchBar({
             setInputValue('')
             onClear()
           }}
-          className="absolute top-2.5 right-3 text-text-muted transition-colors hover:text-foreground"
+          className="absolute right-3 top-2.5 text-text-muted transition-colors hover:text-foreground"
           aria-label="Clear search"
         >
           <X className="h-4 w-4" />

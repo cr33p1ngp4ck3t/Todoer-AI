@@ -1,36 +1,84 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
+
+export type Priority = 'low' | 'medium' | 'high'
+export type Recurrence = 'daily' | 'weekly' | 'monthly'
+export type ProjectRole = 'owner' | 'editor' | 'viewer'
 
 export interface Task {
   id: string
   owner_id: string
   title: string
-  description?: string
+  description?: string | null
   status: 'pending' | 'completed'
-  priority: 'low' | 'medium' | 'high'
-  due_date?: string
+  priority: Priority
+  due_date?: string | null
   tags?: string[]
+  recurrence?: Recurrence | null
+  recurrence_timezone?: string
+  project_id?: string | null
+  assignee_id?: string | null
   created_at: string
   updated_at: string
 }
 
 export interface TaskCreate {
   title: string
-  description?: string
-  priority?: 'low' | 'medium' | 'high'
-  due_date?: string
+  description?: string | null
+  priority?: Priority
+  due_date?: string | null
   tags?: string[]
+  recurrence?: Recurrence | null
+  recurrence_timezone?: string
+  project_id?: string | null
+  assignee_id?: string | null
 }
 
-export interface TaskUpdate {
-  title?: string
-  description?: string
+export interface TaskUpdate extends Partial<TaskCreate> {
   status?: 'pending' | 'completed'
-  priority?: 'low' | 'medium' | 'high'
-  due_date?: string
-  tags?: string[]
 }
 
-// Auth types
+export interface Project {
+  id: string
+  name: string
+  owner_id: string
+  role: ProjectRole
+  created_at: string
+}
+
+export interface ProjectMember {
+  user_id: string
+  username: string
+  email: string
+  role: ProjectRole
+  accepted: boolean
+}
+
+export interface ProjectDetail extends Project {
+  members: ProjectMember[]
+}
+
+export interface Invitation {
+  id: string
+  project_id: string
+  project_name: string
+  role: 'editor' | 'viewer'
+}
+
+export interface TaskBackup {
+  version: 1
+  tasks: (TaskCreate & {
+    id: string
+    status: Task['status']
+    recurrence_day?: number | null
+    recurrence_spawned?: boolean
+  })[]
+}
+
+export interface TaskDraft extends TaskCreate {
+  source: 'ai' | 'fallback'
+  warnings: string[]
+}
+
 export interface User {
   id: string
   username: string
@@ -44,10 +92,8 @@ export interface LoginRequest {
   password: string
 }
 
-export interface RegisterRequest {
+export interface RegisterRequest extends LoginRequest {
   username: string
-  email: string
-  password: string
 }
 
 export interface TokenResponse {
@@ -56,127 +102,117 @@ export interface TokenResponse {
   refresh_token?: string
 }
 
-const getHeaders = () => {
-  const token =
-    typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
-  const headers: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-  return headers
+function handleAuthError() {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+  window.dispatchEvent(new CustomEvent('auth:expired'))
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Discard authenticated state after expiry.
+  window.location.href = '/login?expired=true'
 }
 
-// Handle 401 errors - redirect to login with message
-const handleAuthError = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('access_token')
-    // Dispatch event for AuthContext to handle
-    window.dispatchEvent(new CustomEvent('auth:expired'))
-    // Redirect to login
-    window.location.href = '/login?expired=true'
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  authenticated = true
+): Promise<T> {
+  const token =
+    authenticated && typeof window !== 'undefined'
+      ? localStorage.getItem('access_token')
+      : null
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  })
+  if (response.status === 401 && authenticated) {
+    handleAuthError()
+    throw new Error('Session expired')
   }
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`
+    try {
+      const error = await response.json()
+      if (typeof error.detail === 'string') message = error.detail
+    } catch {
+      // Gateways can return HTML instead of the API's JSON error response.
+    }
+    throw new Error(message)
+  }
+  if (response.status === 204) return undefined as T
+  return response.json()
 }
 
 export const api = {
   tasks: {
-    list: async (
+    list: (
       params: {
         search?: string
         status?: string
         priority?: string
         sort_by?: string
+        project_id?: string | null
       } = {}
     ): Promise<Task[]> => {
-      // Filter out undefined/null/empty values and "all" (special value for no filter)
-      const filteredParams = Object.entries(params).reduce(
-        (acc, [key, value]) => {
-          if (
-            value !== undefined &&
-            value !== null &&
-            value !== '' &&
-            value !== 'all'
-          ) {
-            acc[key] = value
-          }
-          return acc
-        },
-        {} as Record<string, string>
-      )
-      const query = new URLSearchParams(filteredParams).toString()
-      const url = query
-        ? `${API_URL}/tasks?${query}`
-        : `${API_URL}/tasks`
-      const response = await fetch(url, {
-        headers: getHeaders(),
-      })
-      if (response.status === 401) {
-        handleAuthError()
-        return []
+      const query = new URLSearchParams()
+      for (const [key, value] of Object.entries(params)) {
+        if (value && value !== 'all') query.set(key, value)
       }
-      if (!response.ok) {
-        // Return empty array for 400+ responses - user-friendly handling
-        return []
-      }
-      return response.json()
+      return request(`/tasks${query.size ? `?${query}` : ''}`)
     },
-
-    create: async (task: TaskCreate): Promise<Task> => {
-      const response = await fetch(`${API_URL}/tasks`, {
+    create: (task: TaskCreate): Promise<Task> =>
+      request('/tasks', { method: 'POST', body: JSON.stringify(task) }),
+    get: (id: string): Promise<Task> => request(`/tasks/${id}`),
+    update: (id: string, task: TaskUpdate): Promise<Task> =>
+      request(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(task) }),
+    delete: (id: string): Promise<void> =>
+      request(`/tasks/${id}`, { method: 'DELETE' }),
+    export: (): Promise<TaskBackup> => request('/tasks/export'),
+    import: (
+      backup: TaskBackup
+    ): Promise<{ imported: number; skipped: number }> =>
+      request('/tasks/import', {
         method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(task),
-      })
-      if (response.status === 401) {
-        handleAuthError()
-        throw new Error('Session expired')
-      }
-      if (!response.ok) throw new Error('Failed to create task')
-      return response.json()
-    },
-
-    get: async (id: string): Promise<Task> => {
-      const response = await fetch(`${API_URL}/tasks/${id}`, {
-        headers: getHeaders(),
-      })
-      if (!response.ok) throw new Error('Task not found')
-      return response.json()
-    },
-
-    update: async (id: string, task: TaskUpdate): Promise<Task> => {
-      const response = await fetch(`${API_URL}/tasks/${id}`, {
-        method: 'PATCH',
-        headers: getHeaders(),
-        body: JSON.stringify(task),
-      })
-      if (!response.ok) throw new Error('Failed to update task')
-      return response.json()
-    },
-
-    delete: async (id: string): Promise<void> => {
-      const response = await fetch(`${API_URL}/tasks/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders(),
-      })
-      if (response.status !== 204) throw new Error('Failed to delete task')
-    },
+        body: JSON.stringify(backup),
+      }),
   },
-
-  chat: {
-    smartParse: async (text: string): Promise<TaskCreate> => {
-      const response = await fetch(`${API_URL}/api/chat/smart-parse`, {
+  projects: {
+    list: (): Promise<Project[]> => request('/projects'),
+    create: (name: string): Promise<Project> =>
+      request('/projects', { method: 'POST', body: JSON.stringify({ name }) }),
+    get: (id: string): Promise<ProjectDetail> => request(`/projects/${id}`),
+    invite: (
+      id: string,
+      email: string,
+      role: 'editor' | 'viewer'
+    ): Promise<Invitation> =>
+      request(`/projects/${id}/invitations`, {
         method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ text }),
-      })
-      if (!response.ok) {
-        // Return a basic task create object as fallback
-        return {
-          title: text.trim().substring(0, 100),
-          priority: 'medium' as const,
-        }
-      }
-      return response.json()
-    },
+        body: JSON.stringify({ email, role }),
+      }),
+    removeMember: (id: string, userId: string): Promise<void> =>
+      request(`/projects/${id}/members/${userId}`, { method: 'DELETE' }),
+    invitations: (): Promise<Invitation[]> => request('/projects/invitations'),
+    accept: (id: string): Promise<Project> =>
+      request(`/projects/invitations/${id}/accept`, { method: 'POST' }),
+  },
+  chat: {
+    smartParse: (
+      text: string,
+      context: { reference_time?: string; timezone?: string } = {}
+    ): Promise<TaskDraft> =>
+      request('/api/chat/smart-parse', {
+        method: 'POST',
+        body: JSON.stringify({
+          text,
+          reference_time: new Date().toISOString(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ...context,
+        }),
+      }),
   },
 
   ping: {
@@ -194,57 +230,39 @@ export const api = {
   },
 
   auth: {
-    login: async (email: string, password: string): Promise<TokenResponse> => {
-      const response = await fetch(`${API_URL}/users/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include',
-      })
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || 'Login failed')
-      }
-      return response.json()
-    },
-
-    register: async (
+    login: (email: string, password: string): Promise<TokenResponse> =>
+      request(
+        '/users/login',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+          credentials: 'include',
+        },
+        false
+      ),
+    register: (
       username: string,
       email: string,
       password: string
-    ): Promise<User> => {
-      const response = await fetch(`${API_URL}/users/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
-        credentials: 'include',
-      })
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || 'Registration failed')
-      }
-      return response.json()
-    },
-
-    me: async (): Promise<User> => {
-      const response = await fetch(`${API_URL}/users/me`, {
-        headers: getHeaders(),
-      })
-      if (!response.ok) throw new Error('Failed to get user')
-      return response.json()
-    },
-
+    ): Promise<User> =>
+      request(
+        '/users/register',
+        {
+          method: 'POST',
+          body: JSON.stringify({ username, email, password }),
+          credentials: 'include',
+        },
+        false
+      ),
+    me: (): Promise<User> => request('/users/me'),
     logout: () => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
       }
     },
   },
-
   health: {
-    check: async (): Promise<{ status: string }> => {
-      const response = await fetch(`${API_URL}/health`)
-      return response.json()
-    },
+    check: (): Promise<{ status: string }> => request('/health', {}, false),
   },
 }

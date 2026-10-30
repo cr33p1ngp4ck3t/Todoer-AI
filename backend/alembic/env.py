@@ -7,12 +7,14 @@ from alembic import context
 
 # Import SQLModel metadata
 from sqlmodel import SQLModel
+from src.lib.database_url import use_installed_postgres_driver
 
 # Import all models to ensure they're registered with SQLModel.metadata
 from src.models.user import User
 from src.models.task import Task, Tag
 from src.models.conversation import Conversation
 from src.models.message import Message
+from src.models.project import Project, ProjectMember, TaskImport
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -41,7 +43,9 @@ def get_database_url():
     # Load environment variables from .env file
     load_dotenv()
 
-    return os.getenv("DATABASE_URL", "sqlite:///./todo.db")
+    return use_installed_postgres_driver(
+        os.getenv("DATABASE_URL", "sqlite:///./todo.db")
+    )
 
 
 def run_migrations_offline() -> None:

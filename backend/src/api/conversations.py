@@ -1,16 +1,18 @@
 """Conversation management API endpoints."""
+
+import logging
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlmodel import Session, select, func
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlmodel import Session, func, select
+from src.api.auth import get_current_user
 from src.lib.database import get_session
-from src.models.user import User
 from src.models.conversation import Conversation
 from src.models.message import Message
-from src.api.auth import get_current_user
-import logging
+from src.models.user import User
 
 logger = logging.getLogger("todo-api")
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
 class ConversationResponse(BaseModel):
     """Conversation response model."""
+
     id: UUID
     title: Optional[str]
     created_at: datetime
@@ -27,6 +30,7 @@ class ConversationResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     """Message response model."""
+
     id: UUID
     role: str
     content: str
@@ -36,6 +40,7 @@ class MessageResponse(BaseModel):
 
 class CreateConversationRequest(BaseModel):
     """Request to create a new conversation."""
+
     title: Optional[str] = None
 
 
@@ -72,19 +77,20 @@ async def list_conversations(
     results = []
     for conv in conversations:
         # Count messages
-        count_query = (
-            select(func.count(Message.id))
-            .where(Message.conversation_id == conv.id)
+        count_query = select(func.count(Message.id)).where(
+            Message.conversation_id == conv.id
         )
         message_count = session.exec(count_query).one()
 
-        results.append(ConversationResponse(
-            id=conv.id,
-            title=conv.title,
-            created_at=conv.created_at,
-            updated_at=conv.updated_at,
-            message_count=message_count,
-        ))
+        results.append(
+            ConversationResponse(
+                id=conv.id,
+                title=conv.title,
+                created_at=conv.created_at,
+                updated_at=conv.updated_at,
+                message_count=message_count,
+            )
+        )
 
     return results
 
@@ -142,7 +148,9 @@ async def get_conversation_messages(
     ]
 
 
-@router.post("", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_conversation(
     request: CreateConversationRequest,
     current_user: User = Depends(get_current_user),

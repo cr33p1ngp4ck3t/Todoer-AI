@@ -1,45 +1,16 @@
 """Tests for chat models (Conversation and Message)."""
-import pytest
+
 from uuid import uuid4
-from datetime import datetime, timezone
-from sqlmodel import Session, select
-from src.models.user import User
+
 from src.models.conversation import Conversation
 from src.models.message import Message
-from src.lib.database import engine
-
-
-@pytest.fixture
-def db_session():
-    """Create a test database session."""
-    session = Session(engine)
-    yield session
-    session.close()
-
-
-@pytest.fixture
-def test_user(db_session):
-    """Create a test user for chat tests."""
-    user = User(
-        username=f"chattest_{uuid4().hex[:8]}",
-        email=f"chattest_{uuid4().hex[:8]}@example.com",
-        hashed_password="hashedpassword123",
-        is_active=True,
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    yield user
-    # Cleanup
-    db_session.delete(user)
-    db_session.commit()
+from src.models.user import User
 
 
 def test_create_conversation(db_session, test_user):
     """Test creating a conversation."""
     conversation = Conversation(
-        user_id=test_user.id,
-        title="Test conversation about tasks"
+        user_id=test_user.id, title="Test conversation about tasks"
     )
     db_session.add(conversation)
     db_session.commit()
@@ -59,10 +30,7 @@ def test_create_conversation(db_session, test_user):
 def test_create_message(db_session, test_user):
     """Test creating messages in a conversation."""
     # Create conversation
-    conversation = Conversation(
-        user_id=test_user.id,
-        title="Test chat"
-    )
+    conversation = Conversation(user_id=test_user.id, title="Test chat")
     db_session.add(conversation)
     db_session.commit()
     db_session.refresh(conversation)
@@ -71,7 +39,7 @@ def test_create_message(db_session, test_user):
     user_message = Message(
         conversation_id=conversation.id,
         role="user",
-        content="Add a task to buy groceries"
+        content="Add a task to buy groceries",
     )
     db_session.add(user_message)
     db_session.commit()
@@ -89,7 +57,7 @@ def test_create_message(db_session, test_user):
         conversation_id=conversation.id,
         role="assistant",
         content="I've created a task 'Buy groceries' with high priority.",
-        tool_calls='[{"tool": "add_task", "args": {"title": "Buy groceries", "priority": "high"}}]'
+        tool_calls='[{"tool": "add_task", "args": {"title": "Buy groceries", "priority": "high"}}]',
     )
     db_session.add(assistant_message)
     db_session.commit()
@@ -108,10 +76,7 @@ def test_create_message(db_session, test_user):
 
 def test_conversation_user_relationship(db_session, test_user):
     """Test relationship between conversation and user."""
-    conversation = Conversation(
-        user_id=test_user.id,
-        title="Test relationship"
-    )
+    conversation = Conversation(user_id=test_user.id, title="Test relationship")
     db_session.add(conversation)
     db_session.commit()
     db_session.refresh(conversation)
@@ -133,24 +98,19 @@ def test_conversation_user_relationship(db_session, test_user):
 
 def test_conversation_message_relationship(db_session, test_user):
     """Test relationship between conversation and messages."""
-    conversation = Conversation(
-        user_id=test_user.id,
-        title="Test messages"
-    )
+    conversation = Conversation(user_id=test_user.id, title="Test messages")
     db_session.add(conversation)
     db_session.commit()
     db_session.refresh(conversation)
 
     # Add multiple messages
     message1 = Message(
-        conversation_id=conversation.id,
-        role="user",
-        content="First message"
+        conversation_id=conversation.id, role="user", content="First message"
     )
     message2 = Message(
         conversation_id=conversation.id,
         role="assistant",
-        content="Response to first message"
+        content="Response to first message",
     )
     db_session.add(message1)
     db_session.add(message2)
@@ -178,23 +138,16 @@ def test_conversation_message_relationship(db_session, test_user):
 def test_cascade_delete_messages(db_session, test_user):
     """Test that deleting a conversation also deletes its messages."""
     # Create conversation with messages
-    conversation = Conversation(
-        user_id=test_user.id,
-        title="Test cascade delete"
-    )
+    conversation = Conversation(user_id=test_user.id, title="Test cascade delete")
     db_session.add(conversation)
     db_session.commit()
     db_session.refresh(conversation)
 
     message1 = Message(
-        conversation_id=conversation.id,
-        role="user",
-        content="Test message 1"
+        conversation_id=conversation.id, role="user", content="Test message 1"
     )
     message2 = Message(
-        conversation_id=conversation.id,
-        role="assistant",
-        content="Test message 2"
+        conversation_id=conversation.id, role="assistant", content="Test message 2"
     )
     db_session.add(message1)
     db_session.add(message2)
@@ -233,18 +186,13 @@ def test_cascade_delete_conversations(db_session):
     db_session.refresh(user)
 
     # Create conversation with message
-    conversation = Conversation(
-        user_id=user.id,
-        title="Test cascade"
-    )
+    conversation = Conversation(user_id=user.id, title="Test cascade")
     db_session.add(conversation)
     db_session.commit()
     db_session.refresh(conversation)
 
     message = Message(
-        conversation_id=conversation.id,
-        role="user",
-        content="Test message"
+        conversation_id=conversation.id, role="user", content="Test message"
     )
     db_session.add(message)
     db_session.commit()

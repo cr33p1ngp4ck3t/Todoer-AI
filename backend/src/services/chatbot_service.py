@@ -3,20 +3,26 @@
 This module coordinates the LLM providers, MCP tools, and conversation
 management to provide a unified chatbot interface with streaming support.
 """
-import json
+
 import asyncio
-from typing import AsyncIterator, Dict, Any, List, Optional, Tuple
+import inspect
+import json
+import logging
+from datetime import datetime
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 from uuid import UUID
+
 from sqlmodel import Session
-from src.services.llm_providers import LLMProvider, LLMProviderManager
-from src.services.groq_client import GroqClient
-from src.services.gemini_client import GeminiClient
-from src.services.mcp_server import MCPToolHandler, get_mcp_tools
+from src.lib.task_draft import DraftFields, SmartParseRequest, TaskDraft
 from src.models.conversation import Conversation
 from src.models.message import Message
-import logging
+from src.services.gemini_client import GeminiClient, create_gemini_client
+from src.services.groq_client import GroqClient, create_groq_client
+from src.services.llm_providers import LLMProvider, LLMProviderManager
+from src.services.mcp_server import MCPToolHandler, get_mcp_tools
 
 logger = logging.getLogger("todo-api")
+SMART_PARSE_TIMEOUT = 15
 
 
 class ChatbotService:
@@ -81,19 +87,31 @@ Remember: You have access to the user's actual task data through your tools."""
             Tuple of (client, provider_type)
         """
         # Get primary and fallback configs
-        primary_config, fallback_config = self.provider_manager.get_primary_with_fallback()
+        primary_config, fallback_config = (
+            self.provider_manager.get_primary_with_fallback()
+        )
 
         if primary_config is None:
-            raise ValueError("No LLM provider is configured. Please set GROQ_API_KEY or GEMINI_API_KEY.")
+            raise ValueError(
+                "No LLM provider is configured. Please set GROQ_API_KEY or GEMINI_API_KEY."
+            )
 
         # Try preferred provider first
-        provider_to_try = preferred_provider or self.provider_manager.get_default_provider()
+        provider_to_try = (
+            preferred_provider or self.provider_manager.get_default_provider()
+        )
 
-        if provider_to_try == LLMProvider.GROQ and primary_config.provider == LLMProvider.GROQ:
+        if (
+            provider_to_try == LLMProvider.GROQ
+            and primary_config.provider == LLMProvider.GROQ
+        ):
             client = await self._create_groq_client(primary_config)
             return client, LLMProvider.GROQ
 
-        if provider_to_try == LLMProvider.GEMINI and primary_config.provider == LLMProvider.GEMINI:
+        if (
+            provider_to_try == LLMProvider.GEMINI
+            and primary_config.provider == LLMProvider.GEMINI
+        ):
             client = self._create_gemini_client(primary_config)
             return client, LLMProvider.GEMINI
 
@@ -138,73 +156,82 @@ Remember: You have access to the user's actual task data through your tools."""
             raise ValueError("Gemini API key not configured")
         return client
 
-    async def smart_parse_task(self, text: str) -> Dict[str, Any]:
-        """Parse natural language task description into a structured Task object.
+    async def smart_parse_task(
+        self,
+        text: str,
+        reference_time: Optional[datetime] = None,
+        timezone: str = "UTC",
+    ) -> Dict[str, Any]:
+        """Return a validated preview; provider failures preserve the user's text."""
+        from datetime import timezone as utc_timezone
+        from zoneinfo import ZoneInfo
 
-        Args:
-            text: Natural language task description
-
-        Returns:
-            Dictionary with task fields (title, description, priority, tags, status)
-        """
-        prompt = f"""Extract task details from this text: "{text}"
-        Return ONLY valid JSON with these keys:
-        - title: string (required)
-        - description: string (optional, null if empty)
-        - priority: string (low, medium, high - default medium)
-        - tags: list of strings (optional)
-        - status: string (pending)
-
-        Respond with JSON ONLY."""
-
-        client, provider = await self.get_provider_client()
-
+        request = SmartParseRequest(
+            text=text, reference_time=reference_time, timezone=timezone
+        )
+        local_time = (
+            request.reference_time or datetime.now(utc_timezone.utc)
+        ).astimezone(ZoneInfo(request.timezone))
+        instructions = f"""Extract a task draft from the user's text; never execute actions.
+Reference time: {local_time.isoformat()}. Timezone: {request.timezone}.
+Resolve relative dates using that reference time and timezone.
+Return ONLY a JSON object with title (1-255 characters), description (null or
+at most 1000 characters), priority (low/medium/high, default medium), tags
+(at most 20 strings, each 1-50 characters), due_date (null or ISO 8601 datetime
+with UTC offset), recurrence (null or daily/weekly/monthly).
+Include dates and recurrence only when the user requests them. A recurrence
+requires a due_date. If time or date is ambiguous, use null so the user can
+choose it in the preview. Do not output ownership, status, or permissions."""
+        client = None
+        response_gen = None
         try:
-            messages = [{"role": "system", "content": "You are a helpful task parser."},
-                        {"role": "user", "content": prompt}]
-
-            # Using simple chat (no stream) for parsing
-            response_gen = client.chat(messages=messages, stream=False)
-            response = await anext(response_gen)
-
-            content = ""
-            if provider == LLMProvider.GROQ:
-                content = response.choices[0].message.content
-            elif provider == LLMProvider.GEMINI:
-                # Gemini structure varies depending on SDK version
-                if hasattr(response, 'text'):
-                    content = response.text
-                elif hasattr(response, 'choices'):
-                    content = response.choices[0].message.content
-
-            # Clean JSON string (remove markdown blocks if present)
-            content = content.strip()
-            if content.startswith("```json"):
-                content = content[7:-3].strip()
-            elif content.startswith("```"):
-                content = content[3:-3].strip()
-
-            parsed = json.loads(content)
-
-            # Validate priority
-            if "priority" in parsed and parsed["priority"] not in ["low", "medium", "high"]:
-                parsed["priority"] = "medium"
-
-            return parsed
-
-        except Exception as e:
-            logger.error(f"Smart parse error: {e}", exc_info=True)
-            # Fallback to simple extraction
-            return {
-                "title": text[:100],
-                "description": text,
-                "priority": "medium",
-                "status": "pending",
-                "tags": []
-            }
+            async with asyncio.timeout(SMART_PARSE_TIMEOUT):
+                client, provider = await self.get_provider_client()
+                response_gen = client.chat(
+                    messages=[
+                        {"role": "system", "content": instructions},
+                        {"role": "user", "content": request.text},
+                    ],
+                    stream=False,
+                )
+                response = await anext(response_gen)
+                content = (
+                    response.text
+                    if provider == LLMProvider.GEMINI and hasattr(response, "text")
+                    else response.choices[0].message.content
+                ).strip()
+                if content.startswith("```") and content.endswith("```"):
+                    content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                fields = DraftFields.model_validate(json.loads(content))
+                draft = TaskDraft(
+                    **fields.model_dump(),
+                    recurrence_timezone=request.timezone,
+                    source="ai",
+                )
+        except Exception as exc:
+            # Do not log provider output or personal task text.
+            logger.warning("AI draft unavailable (%s)", type(exc).__name__)
+            draft = TaskDraft(
+                title=request.text[:255],
+                description=request.text[:1000] if len(request.text) > 255 else None,
+                recurrence_timezone=request.timezone,
+                source="fallback",
+                warnings=[
+                    "AI could not prepare this draft. Review the text and choose any deadline yourself."
+                ],
+            )
         finally:
-            if hasattr(client, 'close'):
-                await client.close()
+            for resource, method in ((response_gen, "aclose"), (client, "close")):
+                if resource is None or not hasattr(resource, method):
+                    continue
+                try:
+                    async with asyncio.timeout(2):
+                        result = getattr(resource, method)()
+                        if inspect.isawaitable(result):
+                            await result
+                except Exception as exc:
+                    logger.warning("AI draft cleanup failed (%s)", type(exc).__name__)
+        return draft.model_dump(mode="json")
 
     async def chat(
         self,
@@ -260,7 +287,7 @@ Remember: You have access to the user's actual task data through your tools."""
             logger.error(f"Chat error: {e}", exc_info=True)
             yield {"error": str(e)}
         finally:
-            if hasattr(client, 'close'):
+            if hasattr(client, "close"):
                 await client.close()
 
     async def _get_or_create_conversation(
@@ -310,10 +337,12 @@ Remember: You have access to the user's actual task data through your tools."""
         recent_messages.reverse()  # Oldest first
 
         for msg in recent_messages:
-            messages.append({
-                "role": msg.role,
-                "content": msg.content,
-            })
+            messages.append(
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                }
+            )
 
         return messages
 
@@ -332,8 +361,3 @@ Remember: You have access to the user's actual task data through your tools."""
             Tool execution result
         """
         return self.mcp_handler.execute_tool(tool_name, arguments)
-
-
-# Import helper functions at module level
-from src.services.groq_client import create_groq_client
-from src.services.gemini_client import create_gemini_client

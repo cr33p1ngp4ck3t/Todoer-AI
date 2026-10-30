@@ -1,24 +1,25 @@
 # --- Builder Stage ---
-FROM node:20-slim AS builder
+FROM node:26-slim AS builder
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm config set registry https://registry.npmjs.org/ && \
-    npm ci --legacy-peer-deps --no-optional --prefer-offline
+RUN npm ci
 
 # Copy source code
 COPY . .
 
 # Build application
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_API_URL=/api
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN npm run build
 
 # --- Production Stage ---
-FROM node:20-slim
+FROM node:26-slim
 
 WORKDIR /app
 
@@ -39,7 +40,7 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
+    CMD node -e "fetch('http://localhost:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
 # Run application - listen on all interfaces (0.0.0.0) for Kubernetes port-forward
 ENV HOSTNAME=0.0.0.0

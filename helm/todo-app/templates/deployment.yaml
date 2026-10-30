@@ -25,10 +25,14 @@ spec:
         {{- include "todo-app.selectorLabels" . | nindent 8 }}
         app: backend
     spec:
+      securityContext: {"runAsNonRoot": true, "runAsUser": 1000, "seccompProfile": {"type": "RuntimeDefault"}}
       containers:
       - name: backend
+        securityContext: {"allowPrivilegeEscalation": false, "capabilities": {"drop": ["ALL"]}}
         image: "{{ .Values.image.backend.repository }}:{{ .Values.image.backend.tag }}"
         imagePullPolicy: {{ .Values.image.backend.pullPolicy }}
+        command: ["uvicorn", "src.main:app"]
+        args: ["--host", "0.0.0.0", "--port", "8000", "--root-path", "/api", "--proxy-headers", "--forwarded-allow-ips", "*"]
         ports:
         - name: http
           containerPort: 8000
@@ -37,7 +41,7 @@ spec:
         - configMapRef:
             name: {{ include "todo-app.fullname" . }}-backend-config
         - secretRef:
-            name: {{ include "todo-app.fullname" . }}-backend-secrets
+            name: {{ required "backendSecrets.existingSecret is required" .Values.backendSecrets.existingSecret }}
         resources:
           {{- toYaml .Values.resources.backend | nindent 12 }}
         livenessProbe:
@@ -54,13 +58,14 @@ spec:
           periodSeconds: 5
       initContainers:
       - name: run-migrations
+        securityContext: {"allowPrivilegeEscalation": false, "capabilities": {"drop": ["ALL"]}}
         image: "{{ .Values.image.backend.repository }}:{{ .Values.image.backend.tag }}"
         command: ["alembic", "upgrade", "head"]
         envFrom:
         - configMapRef:
             name: {{ include "todo-app.fullname" . }}-backend-config
         - secretRef:
-            name: {{ include "todo-app.fullname" . }}-backend-secrets
+            name: {{ required "backendSecrets.existingSecret is required" .Values.backendSecrets.existingSecret }}
 
 ---
 apiVersion: apps/v1
@@ -90,17 +95,16 @@ spec:
         {{- include "todo-app.selectorLabels" . | nindent 8 }}
         app: frontend
     spec:
+      securityContext: {"runAsNonRoot": true, "runAsUser": 1001, "seccompProfile": {"type": "RuntimeDefault"}}
       containers:
       - name: frontend
+        securityContext: {"allowPrivilegeEscalation": false, "capabilities": {"drop": ["ALL"]}}
         image: "{{ .Values.image.frontend.repository }}:{{ .Values.image.frontend.tag }}"
         imagePullPolicy: {{ .Values.image.frontend.pullPolicy }}
         ports:
         - name: http
           containerPort: 3000
           protocol: TCP
-        envFrom:
-        - configMapRef:
-            name: {{ include "todo-app.fullname" . }}-frontend-config
         resources:
           {{- toYaml .Values.resources.frontend | nindent 12 }}
         livenessProbe:

@@ -1,13 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Task, TaskUpdate } from '@/services/api'
+import { useState } from 'react'
+import { Loader2, Plus, X } from 'lucide-react'
+import type {
+  Task,
+  TaskUpdate,
+  ProjectMember,
+  Priority,
+  Recurrence,
+} from '../services/api'
+import { toLocalDateTime, toUtcDateTime } from '../lib/task-dates'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from './ui/dialog'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
@@ -18,136 +26,133 @@ import {
   SelectItem,
   SelectValue,
 } from './ui/select'
-import { Badge } from './ui/badge'
-import { X, Plus, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
-interface EditTaskModalProps {
+export interface EditTaskModalProps {
   task: Task
-  onSave: (id: string, updates: TaskUpdate) => void
+  onSave: (id: string, updates: TaskUpdate) => Promise<void> | void
   onClose: () => void
+  members?: ProjectMember[]
 }
 
 export default function EditTaskModal({
   task,
   onSave,
   onClose,
+  members = [],
 }: EditTaskModalProps) {
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description || '')
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(
-    task.priority as 'low' | 'medium' | 'high'
+  const [priority, setPriority] = useState<Priority>(task.priority)
+  const [dueDate, setDueDate] = useState(toLocalDateTime(task.due_date))
+  const [recurrence, setRecurrence] = useState<Recurrence | ''>(
+    task.recurrence || ''
   )
-  const [dueDate, setDueDate] = useState(
-    task.due_date ? task.due_date.slice(0, 16) : ''
-  )
-  const [tags, setTags] = useState<string[]>(task.tags || [])
+  const [assigneeId, setAssigneeId] = useState(task.assignee_id || '')
+  const [tags, setTags] = useState(task.tags || [])
   const [tagInput, setTagInput] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!title.trim()) return
-
-    setLoading(true)
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    if (!title.trim() || saving) return
+    setSaving(true)
+    setError('')
     try {
-      onSave(task.id, {
+      await onSave(task.id, {
         title: title.trim(),
-        description: description.trim() || undefined,
+        description: description.trim() || null,
         priority,
-        due_date: dueDate || undefined,
-        tags: tags.length > 0 ? tags : undefined,
+        due_date: toUtcDateTime(dueDate),
+        recurrence: recurrence || null,
+        recurrence_timezone:
+          (task.recurrence ? task.recurrence_timezone : undefined) ||
+          Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ...(task.project_id ? { assignee_id: assigneeId || null } : {}),
+        tags,
       })
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not save task')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
-  const addTag = () => {
-    const trimmed = tagInput.trim().toLowerCase()
-    if (trimmed && !tags.includes(trimmed)) {
-      setTags([...tags, trimmed])
-    }
+  function addTag() {
+    const tag = tagInput.trim().toLowerCase()
+    if (tag && !tags.includes(tag) && tags.length < 20) setTags([...tags, tag])
     setTagInput('')
   }
 
-  const removeTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag))
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      addTag()
-    }
-  }
-
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !saving) onClose()
+      }}
+    >
+      <DialogContent
+        className="task-editor sm:max-w-xl"
+        showCloseButton={!saving}
+        onEscapeKeyDown={(event) => {
+          if (saving) event.preventDefault()
+        }}
+        onPointerDownOutside={(event) => {
+          if (saving) event.preventDefault()
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Edit Task</DialogTitle>
           <DialogDescription>
-            Make changes to your task below.
+            Make room for what matters. Update the details below.
           </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit}>
-          {/* Title Input */}
-          <div className="mb-4">
-            <label
-              htmlFor="edit-title"
-              className="mb-1 block text-sm font-medium"
-            >
-              Title <span className="text-destructive">*</span>
-            </label>
-            <Input
-              id="edit-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="What needs to be done?"
-              required
-              autoFocus
-            />
-          </div>
-
-          {/* Description Input */}
-          <div className="mb-4">
-            <label
-              htmlFor="edit-description"
-              className="mb-1 block text-sm font-medium"
-            >
-              Description
-            </label>
-            <textarea
-              id="edit-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add more details (optional)..."
-              rows={3}
-              className={cn(
-                'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground shadow-xs min-w-full rounded-md bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 border border-border',
-                'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]'
-              )}
-            />
-          </div>
-
-          {/* Priority and Due Date */}
-          <div className="mb-4 grid grid-cols-2 gap-4">
+        <form onSubmit={submit}>
+          {error ? (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="form-grid">
+            <div className="col-span-full">
+              <label className="field-label" htmlFor="edit-title">
+                Title
+              </label>
+              <Input
+                id="edit-title"
+                className="field-input"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                maxLength={255}
+                required
+                disabled={saving}
+              />
+            </div>
+            <div className="col-span-full">
+              <label className="field-label" htmlFor="edit-description">
+                Description
+              </label>
+              <textarea
+                id="edit-description"
+                className="field-textarea"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={3}
+                maxLength={1000}
+                disabled={saving}
+              />
+            </div>
             <div>
-              <label
-                htmlFor="edit-priority"
-                className="mb-1 block text-sm font-medium"
-              >
+              <label className="field-label" htmlFor="edit-priority">
                 Priority
               </label>
               <Select
                 value={priority}
-                onValueChange={(v) => setPriority(v as 'low' | 'medium' | 'high')}
+                onValueChange={(value) => setPriority(value as Priority)}
+                disabled={saving}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue className="" />
+                <SelectTrigger id="edit-priority" className="field-select">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="low">Low</SelectItem>
@@ -156,81 +161,139 @@ export default function EditTaskModal({
                 </SelectContent>
               </Select>
             </div>
-
             <div>
-              <label
-                htmlFor="edit-due-date"
-                className="mb-1 block text-sm font-medium"
-              >
+              <label className="field-label" htmlFor="edit-due-date">
                 Due Date
               </label>
               <Input
                 id="edit-due-date"
+                className="field-input"
                 type="datetime-local"
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                onChange={(event) => setDueDate(event.target.value)}
+                required={!!recurrence}
+                disabled={saving}
               />
             </div>
-          </div>
-
-          {/* Tags Input */}
-          <div className="mb-4">
-            <label className="mb-1 block text-sm font-medium">Tags</label>
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Type and press Enter..."
-                className="flex-1"
-              />
-              <Button type="button" onClick={addTag} size="sm">
-                <Plus className="h-4 w-4" />
-              </Button>
+            <div>
+              <label className="field-label" htmlFor="edit-recurrence">
+                Repeat
+              </label>
+              <Select
+                value={recurrence || 'none'}
+                onValueChange={(value) =>
+                  setRecurrence(value === 'none' ? '' : (value as Recurrence))
+                }
+                disabled={saving}
+              >
+                <SelectTrigger id="edit-recurrence" className="field-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Does not repeat</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-
-            {/* Tags Display */}
-            {tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
+            {task.project_id ? (
+              <div>
+                <label className="field-label" htmlFor="edit-assignee">
+                  Assignee
+                </label>
+                <Select
+                  value={assigneeId || 'none'}
+                  onValueChange={(value) =>
+                    setAssigneeId(value === 'none' ? '' : value)
+                  }
+                  disabled={saving}
+                >
+                  <SelectTrigger id="edit-assignee" className="field-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {members
+                      .filter((member) => member.accepted)
+                      .map((member) => (
+                        <SelectItem key={member.user_id} value={member.user_id}>
+                          {member.username}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+            <div className="col-span-full">
+              <label className="field-label" htmlFor="edit-tags">
+                Tags
+              </label>
+              <div className="tag-entry">
+                <Input
+                  id="edit-tags"
+                  className="field-input"
+                  value={tagInput}
+                  onChange={(event) => setTagInput(event.target.value)}
+                  maxLength={50}
+                  disabled={saving}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      addTag()
+                    }
+                  }}
+                  placeholder="Add a tag"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label="Add tag"
+                  onClick={addTag}
+                  disabled={saving || !tagInput.trim()}
+                >
+                  <Plus />
+                </Button>
+              </div>
+              <div className="tag-list">
                 {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="gap-1">
+                  <span className="tag-chip" key={tag}>
                     {tag}
                     <button
                       type="button"
-                      onClick={() => removeTag(tag)}
-                      className="hover:text-destructive"
+                      aria-label={`Remove tag ${tag}`}
+                      onClick={() =>
+                        setTags(tags.filter((item) => item !== tag))
+                      }
+                      disabled={saving}
                     >
-                      <X className="h-3 w-3" />
+                      <X size={12} />
                     </button>
-                  </Badge>
+                  </span>
                 ))}
               </div>
-            )}
+            </div>
           </div>
-
-          {/* Status Badge */}
-          <div className="mb-6">
-            <span className="text-muted-foreground text-sm">
-              Status:{' '}
-              <span className="font-medium capitalize">{task.status}</span>
-            </span>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
+          {recurrence ? (
+            <p className="editor-note">
+              Repeats in{' '}
+              {(task.recurrence ? task.recurrence_timezone : undefined) ||
+                Intl.DateTimeFormat().resolvedOptions().timeZone}
+              .
+            </p>
+          ) : null}
+          <div className="editor-footer">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={saving}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !title.trim()}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
+            <Button type="submit" disabled={saving || !title.trim()}>
+              {saving ? <Loader2 className="animate-spin" /> : null}
+              {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </form>

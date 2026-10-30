@@ -1,29 +1,39 @@
-from typing import Optional
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import Session, select
-from src.models.user import User
-from src.api.auth import verify_password, get_password_hash, create_access_token, get_current_user, create_refresh_token_in_db
+from src.api.auth import (
+    create_access_token,
+    create_refresh_token_in_db,
+    get_current_user,
+    get_password_hash,
+    verify_password,
+)
 from src.lib.database import get_session
-import logging
+from src.models.user import User
 
 logger = logging.getLogger("todo-api")
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+
 class LoginRequest(BaseModel):
     email: str
     password: str
+
 
 class RegisterRequest(BaseModel):
     username: str
     email: str
     password: str  # Will be hashed
 
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
 
 class UserResponse(BaseModel):
     id: str
@@ -32,6 +42,7 @@ class UserResponse(BaseModel):
     is_active: bool
     created_at: str
 
+
 @router.post("/login", response_model=TokenResponse)
 async def login(
     request: LoginRequest,
@@ -39,10 +50,7 @@ async def login(
 ):
     """Authenticate user and return JWT access token and refresh token."""
     try:
-        user = session.exec(
-            select(User)
-            .where(User.email == request.email)
-        ).first()
+        user = session.exec(select(User).where(User.email == request.email)).first()
 
         if not user:
             logger.warning(f"Login failed - user not found: {request.email}")
@@ -85,9 +93,10 @@ async def login(
     except Exception as e:
         logger.error(f"Unexpected error during login: {e}")
         raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An error occurred during login",
-            )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during login",
+        ) from e
+
 
 @router.post("/register", response_model=UserResponse, status_code=201)
 async def register(
@@ -96,47 +105,43 @@ async def register(
 ):
     """Register a new user account."""
     try:
-        print(f"DEBUG: Registration request received for {request.username} / {request.email}")
-
         # Check if email already exists
         existing_email = session.exec(
-            select(User)
-            .where(User.email == request.email)
+            select(User).where(User.email == request.email)
         ).first()
 
         if existing_email:
-            logger.warning(f"Registration failed - email already exists: {request.email}")
+            logger.warning(
+                f"Registration failed - email already exists: {request.email}"
+            )
             raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Email already registered",
-                )
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered",
+            )
 
         # Check if username already exists
         existing_username = session.exec(
-            select(User)
-            .where(User.username == request.username)
+            select(User).where(User.username == request.username)
         ).first()
 
         if existing_username:
-            logger.warning(f"Registration failed - username already exists: {request.username}")
+            logger.warning(
+                f"Registration failed - username already exists: {request.username}"
+            )
             raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Username already taken",
-                )
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Username already taken",
+            )
 
         # Create new user
-        print(f"DEBUG: Creating user object")
         user = User(
             username=request.username,
             email=request.email,
             hashed_password=get_password_hash(request.password),
             is_active=True,
         )
-        print(f"DEBUG: Adding user to session")
         session.add(user)
-        print(f"DEBUG: Committing session")
         session.commit()
-        print(f"DEBUG: Refreshing user")
         session.refresh(user)
 
         logger.info(f"New user registered: {user.id}")
@@ -152,13 +157,11 @@ async def register(
         raise
     except Exception as e:
         logger.error(f"Registration error: {type(e).__name__}: {e}", exc_info=True)
-        import traceback
-        print(f"ERROR: {type(e).__name__}: {e}")
-        print(f"TRACEBACK: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Registration failed: {type(e).__name__}: {str(e)}"
-        )
+            detail="An error occurred during registration",
+        ) from e
+
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(

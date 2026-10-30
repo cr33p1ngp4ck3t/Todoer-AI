@@ -3,12 +3,12 @@
 This module provides a client for interacting with Google's Gemini API
 for LLM responses with support for function calling using the new google.genai package.
 """
-import asyncio
-import os
-from typing import AsyncIterator, Dict, Any, List, Optional
+
+import logging
+from typing import Any, AsyncIterator, Dict, List, Optional
+
 import google.generativeai as genai
 from src.services.llm_providers import LLMConfig, LLMProvider
-import logging
 
 logger = logging.getLogger("todo-api")
 
@@ -87,7 +87,11 @@ class GeminiClient:
 
         try:
             client = self._get_client()
-            model_name = f"gemini-{self.config.model}" if not self.config.model.startswith("gemini-") else self.config.model
+            model_name = (
+                f"gemini-{self.config.model}"
+                if not self.config.model.startswith("gemini-")
+                else self.config.model
+            )
 
             # Convert messages to Gemini format
             contents = []
@@ -95,10 +99,7 @@ class GeminiClient:
                 if msg["role"] == "system":
                     continue  # System prompt handled separately
                 role = "user" if msg["role"] == "user" else "model"
-                contents.append({
-                    "role": role,
-                    "parts": [{"text": msg["content"]}]
-                })
+                contents.append({"role": role, "parts": [{"text": msg["content"]}]})
 
             # Prepare tools if provided
             genai_tools = None

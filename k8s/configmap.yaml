@@ -7,16 +7,6 @@ data:
   HOST: "0.0.0.0"
   PORT: "8000"
   DEBUG: "false"
-  CORS_ORIGINS: "http://localhost:3000,http://frontend:3000"
-  FRONTEND_URL: "http://localhost:3000"
+  CORS_ORIGINS: "http://todo.local"
+  FRONTEND_URL: "http://todo.local"
   DEFAULT_LLM_PROVIDER: "groq"
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: frontend-config
-  namespace: todo-app
-data:
-  NEXT_PUBLIC_API_URL: "http://backend:8000"
-  NODE_ENV: "production"

@@ -39,7 +39,7 @@ Key features:
 #### Next.js Config (`frontend/next.config.ts`)
 ```typescript
 output: 'standalone'  // Enables Docker containerization
-NEXT_PUBLIC_API_URL: 'http://backend:8000'  // K8s internal DNS
+NEXT_PUBLIC_API_URL: '/api'  // Same-origin ingress gateway
 ```
 
 ### 2. Kubernetes Manifests (14 YAML files)
@@ -48,7 +48,7 @@ NEXT_PUBLIC_API_URL: 'http://backend:8000'  // K8s internal DNS
 - **namespace.yaml**: Creates `todo-app` namespace
 - **configmap.yaml**: Backend and frontend configuration
   - Backend: HOST, PORT, DEBUG, CORS_ORIGINS, FRONTEND_URL, DEFAULT_LLM_PROVIDER
-  - Frontend: NEXT_PUBLIC_API_URL, NODE_ENV
+  - Frontend: `NEXT_PUBLIC_API_URL` baked into the image at build time
 - **secrets.yaml**: Sensitive data (DB credentials, API keys, OAuth tokens)
 
 #### Database Layer
@@ -173,7 +173,7 @@ helm/todo-app/
 │   ├── deployment.yaml        # Backend & frontend deployments
 │   ├── service.yaml           # Services
 │   ├── configmap.yaml         # Configuration
-│   ├── secrets.yaml           # Secrets
+│   ├── deployment scripts     # Create Secrets from environment values
 │   ├── ingress.yaml           # TLS ingress with cert-manager
 │   └── hpa.yaml               # Horizontal Pod Autoscaling
 ```
@@ -213,7 +213,7 @@ helm/todo-app/
 
 #### configmap.yaml
 - Backend config: dynamically constructed from values
-- Frontend config: includes NEXT_PUBLIC_API_URL templating
+- Frontend image: includes the same-origin `/api` gateway URL
 - Kafka brokers, Dapr component names configurable
 
 #### secrets.yaml
@@ -314,7 +314,7 @@ helm/todo-app/
 ### Kubernetes Manifests (14)
 4. `k8s/namespace.yaml`
 5. `k8s/configmap.yaml`
-6. `k8s/secrets.yaml`
+6. Deployment-created `backend-secrets` and `postgres-secret`
 7. `k8s/postgres.yaml`
 8. `k8s/backend-deployment.yaml`
 9. `k8s/frontend-deployment.yaml`

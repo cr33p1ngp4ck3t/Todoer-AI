@@ -44,7 +44,7 @@ postgres-fdbf8c5bf-ccx2v     1/1     Running   10         14h
 - **Services**: backend, frontend, postgres (ClusterIP)
 - **Ingress**: todo-app-ingress (Nginx)
 - **PersistentVolumeClaim**: postgres-pvc (5Gi)
-- **ConfigMaps**: backend-config, frontend-config
+- **ConfigMaps**: backend-config
 - **Secrets**: backend-secrets, postgres-secret
 - **HorizontalPodAutoscaler**: backend-hpa (2-5 replicas), frontend-hpa (2-5 replicas)
 - **Job**: db-migration (Alembic database migrations)

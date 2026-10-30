@@ -46,23 +46,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initialize auth from browser storage after hydration.
     refreshUser()
   }, [refreshUser])
 
   const login = async (email: string, password: string) => {
     const response = await api.auth.login(email, password)
     localStorage.setItem('access_token', response.access_token)
-    localStorage.setItem('refresh_token', response.refresh_token)
+    if (response.refresh_token) {
+      localStorage.setItem('refresh_token', response.refresh_token)
+    } else {
+      localStorage.removeItem('refresh_token')
+    }
     await refreshUser()
   }
 
-  const register = async (username: string, email: string, password: string) => {
+  const register = async (
+    username: string,
+    email: string,
+    password: string
+  ) => {
     await api.auth.register(username, email, password)
-    // Auto-login after registration
-    const response = await api.auth.login(email, password)
-    localStorage.setItem('access_token', response.access_token)
-    localStorage.setItem('refresh_token', response.refresh_token)
-    await refreshUser()
+    await login(email, password)
   }
 
   const logout = () => {
@@ -70,11 +75,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }
 
-  const setTokens = (accessToken: string, refreshToken: string) => {
-    localStorage.setItem('access_token', accessToken)
-    localStorage.setItem('refresh_token', refreshToken)
-    refreshUser()
-  }
+  const setTokens = useCallback(
+    (accessToken: string, refreshToken: string) => {
+      localStorage.setItem('access_token', accessToken)
+      localStorage.setItem('refresh_token', refreshToken)
+      refreshUser()
+    },
+    [refreshUser]
+  )
 
   return (
     <AuthContext.Provider

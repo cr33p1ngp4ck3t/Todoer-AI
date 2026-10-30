@@ -1,19 +1,20 @@
 """Chat API endpoints with SSE streaming support."""
+
 import json
-import asyncio
+import logging
 from typing import AsyncIterator
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.responses import StreamingResponse
-from sse_starlette.sse import EventSourceResponse
-from sqlmodel import Session
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlmodel import Session
+from src.api.auth import get_current_user
 from src.lib.database import get_session
+from src.lib.task_draft import SmartParseRequest, TaskDraft
+from src.models.user import User
 from src.services.chatbot_service import ChatbotService
 from src.services.mcp_server import MCPToolHandler
-from src.models.user import User
-from src.api.auth import get_current_user
-import logging
+from sse_starlette.sse import EventSourceResponse
 
 logger = logging.getLogger("todo-api")
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -21,12 +22,14 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 class ChatRequest(BaseModel):
     """Request model for chat messages."""
+
     message: str
     conversation_id: UUID | None = None
 
 
 class ToolCallRequest(BaseModel):
     """Request model for tool calls from client."""
+
     tool_name: str
     arguments: dict
 
@@ -61,25 +64,25 @@ async def chat_stream(
             stream=True,
         ):
             # Format as SSE event
-            if hasattr(chunk, 'choices') and chunk.choices:
+            if hasattr(chunk, "choices") and chunk.choices:
                 delta = chunk.choices[0].delta
-                if hasattr(delta, 'content') and delta.content:
+                if hasattr(delta, "content") and delta.content:
                     yield f"data: {json.dumps({'type': 'content', 'content': delta.content})}\n\n"
 
             # Check for tool calls
-            if hasattr(chunk, 'choices') and chunk.choices:
+            if hasattr(chunk, "choices") and chunk.choices:
                 delta = chunk.choices[0].delta
-                if hasattr(delta, 'tool_calls') and delta.tool_calls:
+                if hasattr(delta, "tool_calls") and delta.tool_calls:
                     for tool_call in delta.tool_calls:
                         tool_data = {
-                            'type': 'tool_call',
-                            'data': {
-                                'id': tool_call.id,
-                                'function': {
-                                    'name': tool_call.function.name,
-                                    'arguments': tool_call.function.arguments,
-                                }
-                            }
+                            "type": "tool_call",
+                            "data": {
+                                "id": tool_call.id,
+                                "function": {
+                                    "name": tool_call.function.name,
+                                    "arguments": tool_call.function.arguments,
+                                },
+                            },
                         }
                         yield f"data: {json.dumps(tool_data)}\n\n"
 
@@ -109,8 +112,7 @@ async def send_message(
     """
     if not request.message.strip():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Message cannot be empty"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Message cannot be empty"
         )
 
     logger.info(f"Chat request from user {current_user.id}: {request.message[:100]}...")
@@ -161,12 +163,7 @@ async def execute_tool_call(
     return result
 
 
-class SmartParseRequest(BaseModel):
-    """Request model for smart task parsing."""
-    text: str
-
-
-@router.post("/smart-parse")
+@router.post("/smart-parse", response_model=TaskDraft)
 async def smart_parse_task(
     request: SmartParseRequest,
     current_user: User = Depends(get_current_user),
@@ -182,18 +179,16 @@ async def smart_parse_task(
     Returns:
         Structured task details
     """
-    if not request.text.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Text cannot be empty"
-        )
-
     chatbot = ChatbotService(
         user_id=current_user.id,
         session=session,
     )
 
-    result = await chatbot.smart_parse_task(request.text)
+    result = await chatbot.smart_parse_task(
+        request.text,
+        reference_time=request.reference_time,
+        timezone=request.timezone,
+    )
     return result
 
 

@@ -17,10 +17,14 @@ spec:
       annotations:
         dapr.io/enabled: "false"
     spec:
+      securityContext: {"runAsNonRoot": true, "runAsUser": 1000, "seccompProfile": {"type": "RuntimeDefault"}}
       containers:
       - name: backend
+        securityContext: {"allowPrivilegeEscalation": false, "capabilities": {"drop": ["ALL"]}}
         image: todo-backend:local
         imagePullPolicy: Never
+        command: ["uvicorn", "src.main:app"]
+        args: ["--host", "0.0.0.0", "--port", "8000", "--root-path", "/api", "--proxy-headers", "--forwarded-allow-ips", "*"]
         ports:
         - containerPort: 8000
         envFrom:

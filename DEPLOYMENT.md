@@ -24,11 +24,13 @@ chmod +x scripts/minikube-setup.sh
 ./scripts/minikube-setup.sh
 ```
 
-This scri  pt will:
+Before running either Minikube setup script, export separate random `POSTGRES_PASSWORD`, `SECRET_KEY`, and `SESSION_SECRET` values. Generate `POSTGRES_PASSWORD` as at least 32 hexadecimal characters (for example, `python -c "import secrets; print(secrets.token_hex(32))"`) because it is embedded in a database URL. The scripts create Kubernetes Secrets from those environment variables; no credentials are committed.
+
+This script will:
 1. Start Minikube with 4 CPUs, 8GB memory, docker driver
 2. Install Dapr runtime
 3. Build backend and frontend Docker images
-4. Apply all Kubernetes manifests (namespace, configs, secrets, deployments)
+4. Create Secrets from the required environment variables and apply the manifests
 5. Configure local hosts file for `todo.local`
 
 ### Verify Deployment
@@ -176,6 +178,13 @@ dapr init --runtime-version=1.13.0 --kubernetes --helm-chart-version=1.13.0
 docker push your-registry/todo-backend:latest
 docker push your-registry/todo-frontend:latest
 
+# Create the Secret referenced by backendSecrets.existingSecret
+kubectl create namespace todo-app --dry-run=client -o yaml | kubectl apply -f -
+kubectl create secret generic todo-backend-secrets -n todo-app \
+  --from-literal=DATABASE_URL="$DATABASE_URL" \
+  --from-literal=SECRET_KEY="$SECRET_KEY" \
+  --from-literal=SESSION_SECRET="$SESSION_SECRET"
+
 # Deploy with Helm
 helm install todo-app helm/todo-app \
   --namespace todo-app \
@@ -257,24 +266,20 @@ doctl kubernetes cluster delete todo-cluster
 
 ## Environment Variables
 
-### Backend (.env)
+### Backend Secret
 
-```env
-DATABASE_URL=postgresql://todo:todo@postgres:5432/todo_db
-SECRET_KEY=your-secret-key
-SESSION_SECRET=your-session-secret
-GROQ_API_KEY=your-groq-api-key
-GEMINI_API_KEY=your-gemini-api-key
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GITHUB_CLIENT_ID=your-github-client-id
-GITHUB_CLIENT_SECRET=your-github-client-secret
+Create the Kubernetes Secret named by `backendSecrets.existingSecret` with at least these keys:
+
+```text
+DATABASE_URL
+SECRET_KEY
+SESSION_SECRET
 ```
 
-### Frontend (.env.local)
+Add AI or OAuth keys only when those integrations are enabled. Build the production frontend image with the same-origin gateway URL:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=/api
 ```
 
 ---

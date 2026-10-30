@@ -2,6 +2,14 @@
 
 set -e
 
+: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD before running this script}"
+: "${SECRET_KEY:?Set SECRET_KEY before running this script}"
+: "${SESSION_SECRET:?Set SESSION_SECRET before running this script}"
+[[ "$POSTGRES_PASSWORD" =~ ^[0-9a-fA-F]{32,}$ ]] || {
+  echo "POSTGRES_PASSWORD must be at least 32 hexadecimal characters" >&2
+  exit 1
+}
+
 echo "Starting Minikube setup (Solution 2: Local Build)..."
 
 # Start Minikube with required resources
@@ -57,7 +65,16 @@ echo "=========================================="
 kubectl apply -f k8s/namespace.yaml
 sleep 2
 
-kubectl apply -f k8s/secrets.yaml
+kubectl create secret generic postgres-secret -n todo-app \
+  --from-literal=POSTGRES_USER=todo \
+  --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+  --from-literal=POSTGRES_DB=todo_db \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl create secret generic backend-secrets -n todo-app \
+  --from-literal=DATABASE_URL="postgresql://todo:${POSTGRES_PASSWORD}@postgres:5432/todo_db" \
+  --from-literal=SECRET_KEY="$SECRET_KEY" \
+  --from-literal=SESSION_SECRET="$SESSION_SECRET" \
+  --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f k8s/configmap.yaml
 
 echo "Deploying PostgreSQL..."

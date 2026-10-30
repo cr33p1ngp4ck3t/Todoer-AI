@@ -1,130 +1,98 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { Mic, MicOff, Loader2 } from 'lucide-react'
-import { api } from '../services/api'
+import { useEffect, useRef, useState } from 'react'
+import { Mic, MicOff } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from './ui/button'
 
 interface VoiceCommandProps {
-  onCommandExecuted?: (command: string) => void
-  onTaskCreated?: () => void
+  onCommandExecuted?: (text: string) => void
 }
 
-export default function VoiceCommand({
-  onCommandExecuted,
-  onTaskCreated,
-}: VoiceCommandProps) {
-  const [isListening, setIsListening] = useState(false)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const recognitionRef = useRef<any | null>(null)
+interface SpeechRecognition {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onstart: (() => void) | null
+  onresult: ((event: { results: { transcript: string }[][] }) => void) | null
+  onend: (() => void) | null
+  onerror: ((event: { error: string }) => void) | null
+  start: () => void
+  stop: () => void
+}
 
-  const startListening = () => {
-    if (
-      !('webkitSpeechRecognition' in window) &&
-      !('SpeechRecognition' in window)
-    ) {
+type SpeechWindow = Window & {
+  SpeechRecognition?: new () => SpeechRecognition
+  webkitSpeechRecognition?: new () => SpeechRecognition
+}
+
+export default function VoiceCommand({ onCommandExecuted }: VoiceCommandProps) {
+  const [listening, setListening] = useState(false)
+  const recognition = useRef<SpeechRecognition | null>(null)
+
+  useEffect(
+    () => () => {
+      if (recognition.current) {
+        recognition.current.onstart = null
+        recognition.current.onresult = null
+        recognition.current.onend = null
+        recognition.current.onerror = null
+        recognition.current.stop()
+      }
+    },
+    []
+  )
+
+  function start() {
+    const speechWindow = window as SpeechWindow
+    const Speech =
+      speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition
+    if (!Speech) {
       toast.error('Voice commands are not supported in your browser')
       return
     }
-
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition
-    recognitionRef.current = new SpeechRecognition()
-    recognitionRef.current.continuous = false
-    recognitionRef.current.interimResults = false
-    recognitionRef.current.lang = 'en-US'
-
-    recognitionRef.current.onstart = () => {
-      setIsListening(true)
-      toast.info('Listening... speak now')
+    const recorder = new Speech()
+    recognition.current = recorder
+    recorder.continuous = false
+    recorder.interimResults = false
+    recorder.lang = navigator.language || 'en-US'
+    recorder.onstart = () => setListening(true)
+    recorder.onend = () => setListening(false)
+    recorder.onresult = (event) => {
+      const text = event.results[0]?.[0]?.transcript?.trim()
+      if (text) onCommandExecuted?.(text)
     }
-
-    recognitionRef.current.onresult = async (event: any) => {
-      const transcript = event.results[0][0].transcript
-      setIsProcessing(true)
-      try {
-        // Send voice command to backend for parsing
-        const parsed = await api.chat.smartParse(transcript)
-        toast.success(`Parsed: ${parsed.title}`)
-        onCommandExecuted?.(JSON.stringify(parsed))
-      } catch (error) {
-        console.error('Failed to process voice command:', error)
-        toast.error('Failed to process voice command')
-      } finally {
-        setIsProcessing(false)
-        setIsListening(false)
-      }
+    recorder.onerror = (event) => {
+      setListening(false)
+      if (event.error === 'no-speech' || event.error === 'aborted') return
+      toast.error(
+        event.error === 'not-allowed'
+          ? 'Allow microphone access to use voice input.'
+          : 'Voice input failed. Try typing your task instead.'
+      )
     }
-
-    recognitionRef.current.onend = () => {
-      setIsListening(false)
-    }
-
-    recognitionRef.current.onerror = (event: any) => {
-      // Handle network errors gracefully
-      if (event.error === 'network') {
-        console.warn(
-          'Speech recognition network error - check internet connection'
-        )
-        toast.error(
-          'No internet connection. Voice commands require internet access.'
-        )
-      } else if (event.error === 'not-allowed') {
-        console.warn(
-          'Speech recognition blocked - microphone permission denied'
-        )
-        toast.error(
-          'Microphone access denied. Please allow microphone access in browser settings.'
-        )
-      } else if (event.error === 'no-speech') {
-        // No speech detected - not really an error, just user didn't speak
-        setIsListening(false)
-        return
-      } else {
-        console.warn('Speech recognition error:', event.error)
-        toast.error(`Speech recognition error: ${event.error}`)
-      }
-      setIsListening(false)
-    }
-
-    recognitionRef.current.start()
-  }
-
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop()
-      setIsListening(false)
+    try {
+      setListening(true)
+      recorder.start()
+    } catch {
+      setListening(false)
+      toast.error('Could not start voice input. Try again.')
     }
   }
 
   return (
-    <button
-      onClick={isListening ? stopListening : startListening}
-      disabled={isProcessing}
-      className={`rounded-full p-2 transition-all ${
-        isListening
-          ? 'animate-pulse bg-destructive hover:bg-accent/90'
-          : isProcessing
-            ? 'cursor-not-allowed bg-muted'
-            : 'bg-secondary'
-      }`}
-      aria-label={isListening ? 'Stop listening' : 'Start voice command'}
-      title={
-        isListening
-          ? 'Stop listening'
-          : isProcessing
-            ? 'Processing...'
-            : 'Start voice command'
-      }
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      aria-label={listening ? 'Stop listening' : 'Start voice command'}
+      title={listening ? 'Stop listening' : 'Draft a task with your voice'}
+      onClick={() => {
+        if (listening) recognition.current?.stop()
+        else start()
+      }}
     >
-      {isProcessing ? (
-        <Loader2 className="h-5 w-5 animate-spin text-foreground" />
-      ) : isListening ? (
-        <MicOff className="h-5 w-5 text-foreground" />
-      ) : (
-        <Mic className="h-5 w-5 text-foreground" />
-      )}
-    </button>
+      {listening ? <MicOff className="text-destructive" /> : <Mic />}
+    </Button>
   )
 }

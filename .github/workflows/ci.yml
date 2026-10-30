@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.12.1'
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --project backend --locked
+      - name: Check exported runtime dependencies
+        run: |
+          uv export --project backend --locked --no-dev --no-emit-project --output-file backend/requirements.txt
+          git diff --exit-code -- backend/requirements.txt
+      - run: uv run --project backend --locked ruff check backend/src backend/tests
+      - run: uv run --project backend --locked black --check backend/src backend/tests
+      - run: uv run --project backend --locked pytest
+      - run: uv run --project backend --locked pip-audit --disable-pip --require-hashes -r backend/requirements.txt
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run format:check
+      - run: npm run test:unit
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+  infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with:
+          version: v3.17.3
+      - run: helm lint --strict helm/todo-app
+      - run: helm template todo helm/todo-app > /tmp/todo-manifests.yaml
+      - name: Validate Kubernetes schemas
+        run: |
+          tool_dir=$(mktemp -d)
+          trap 'rm -rf "$tool_dir"' EXIT
+          release=https://github.com/yannh/kubeconform/releases/download/v0.7.0
+          curl --fail --location "$release/kubeconform-linux-amd64.tar.gz" -o "$tool_dir/kubeconform-linux-amd64.tar.gz"
+          curl --fail --location "$release/CHECKSUMS" -o "$tool_dir/CHECKSUMS"
+          (cd "$tool_dir" && grep 'kubeconform-linux-amd64.tar.gz$' CHECKSUMS | sha256sum --check --strict)
+          tar -xzf "$tool_dir/kubeconform-linux-amd64.tar.gz" -C "$tool_dir" kubeconform
+          # Dapr Components require their own installed CRD schemas; all built-in kinds must validate.
+          "$tool_dir/kubeconform" -strict -summary -kubernetes-version 1.31.0 -skip Component /tmp/todo-manifests.yaml k8s/
+      - name: Generate ephemeral local credentials
+        run: |
+          python - <<'PY'
+          import secrets
+          from pathlib import Path
+          keys = ("POSTGRES_PASSWORD", "SECRET_KEY", "SESSION_SECRET")
+          Path(".env").write_text("".join(f"{key}={secrets.token_hex(32)}\n" for key in keys))
+          PY
+      - run: docker compose config --quiet
+      - run: docker compose up --build --wait --wait-timeout 180
+      - name: Check the running stack
+        run: |
+          curl --fail http://localhost:8000/health
+          curl --fail http://localhost:3000/ > /dev/null
+          python scripts/smoke_test.py
+      - run: docker compose logs --no-color
+        if: failure()
+      - run: docker compose down --volumes
+        if: always()

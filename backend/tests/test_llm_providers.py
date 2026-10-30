@@ -1,45 +1,16 @@
 """Tests for LLM provider integration."""
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
-from sqlmodel import Session
 
-from src.services.llm_providers import (
-    LLMProvider,
-    LLMConfig,
-    LLMProviderManager,
-    get_provider_manager,
-)
-from src.services.groq_client import GroqClient, create_groq_client
-from src.services.gemini_client import GeminiClient, create_gemini_client
+import pytest
 from src.services.chatbot_service import ChatbotService
-from src.models.user import User
-from src.lib.database import engine
-
-
-@pytest.fixture
-def db_session():
-    """Create a test database session."""
-    session = Session(engine)
-    yield session
-    session.close()
-
-
-@pytest.fixture
-def test_user(db_session):
-    """Create a test user."""
-    user = User(
-        username=f"llmtest_{uuid4().hex[:8]}",
-        email=f"llmtest_{uuid4().hex[:8]}@example.com",
-        hashed_password="hashedpassword123",
-        is_active=True,
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    yield user
-    db_session.delete(user)
-    db_session.commit()
+from src.services.gemini_client import GeminiClient, create_gemini_client
+from src.services.groq_client import GroqClient, create_groq_client
+from src.services.llm_providers import (
+    LLMConfig,
+    LLMProvider,
+    LLMProviderManager,
+)
 
 
 class TestLLMConfig:
@@ -92,7 +63,9 @@ class TestLLMProviderManager:
 
     def test_get_available_providers_all_configured(self):
         """Test getting providers when all are configured."""
-        with patch.dict("os.environ", {"GROQ_API_KEY": "groq-key", "GEMINI_API_KEY": "gemini-key"}):
+        with patch.dict(
+            "os.environ", {"GROQ_API_KEY": "groq-key", "GEMINI_API_KEY": "gemini-key"}
+        ):
             manager = LLMProviderManager()
             providers = manager.get_available_providers()
 
@@ -104,6 +77,7 @@ class TestLLMProviderManager:
         with patch.dict("os.environ", {"GROQ_API_KEY": "groq-key"}, clear=False):
             # Clear other env vars
             import os
+
             if "GEMINI_API_KEY" in os.environ:
                 del os.environ["GEMINI_API_KEY"]
 
@@ -115,11 +89,14 @@ class TestLLMProviderManager:
 
     def test_get_default_provider_groq(self):
         """Test default provider selection when Groq is set."""
-        with patch.dict("os.environ", {
-            "GROQ_API_KEY": "groq-key",
-            "GEMINI_API_KEY": "gemini-key",
-            "DEFAULT_LLM_PROVIDER": "groq"
-        }):
+        with patch.dict(
+            "os.environ",
+            {
+                "GROQ_API_KEY": "groq-key",
+                "GEMINI_API_KEY": "gemini-key",
+                "DEFAULT_LLM_PROVIDER": "groq",
+            },
+        ):
             manager = LLMProviderManager()
             default = manager.get_default_provider()
 
@@ -127,11 +104,14 @@ class TestLLMProviderManager:
 
     def test_get_default_provider_gemini(self):
         """Test default provider selection when Gemini is set."""
-        with patch.dict("os.environ", {
-            "GROQ_API_KEY": "groq-key",
-            "GEMINI_API_KEY": "gemini-key",
-            "DEFAULT_LLM_PROVIDER": "gemini"
-        }):
+        with patch.dict(
+            "os.environ",
+            {
+                "GROQ_API_KEY": "groq-key",
+                "GEMINI_API_KEY": "gemini-key",
+                "DEFAULT_LLM_PROVIDER": "gemini",
+            },
+        ):
             manager = LLMProviderManager()
             default = manager.get_default_provider()
 
@@ -139,11 +119,14 @@ class TestLLMProviderManager:
 
     def test_get_default_fallback(self):
         """Test fallback when default provider is not available."""
-        with patch.dict("os.environ", {
-            "GROQ_API_KEY": "groq-key",
-            "GEMINI_API_KEY": "gemini-key",
-            "DEFAULT_LLM_PROVIDER": "groq"
-        }):
+        with patch.dict(
+            "os.environ",
+            {
+                "GROQ_API_KEY": "groq-key",
+                "GEMINI_API_KEY": "gemini-key",
+                "DEFAULT_LLM_PROVIDER": "groq",
+            },
+        ):
             manager = LLMProviderManager()
             primary, fallback = manager.get_primary_with_fallback()
 
@@ -198,7 +181,9 @@ class TestGroqClient:
         async def mock_stream():
             yield mock_chunk
 
-        with patch.object(client.client.chat.completions, 'create', new_callable=AsyncMock) as mock_create:
+        with patch.object(
+            client.client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
             mock_create.return_value = mock_stream()
             messages = [{"role": "user", "content": "Hi"}]
 
@@ -252,7 +237,9 @@ class TestChatbotService:
         assert "List tasks" in service.SYSTEM_PROMPT  # "List tasks" not "list_tasks"
 
     @pytest.mark.asyncio
-    async def test_get_provider_client_fails_without_config(self, test_user, db_session):
+    async def test_get_provider_client_fails_without_config(
+        self, test_user, db_session
+    ):
         """Test that service fails gracefully when no provider is configured."""
         # Mock provider manager to return no providers
         mock_manager = MagicMock()
@@ -274,7 +261,7 @@ class TestProviderFactory:
     @pytest.mark.asyncio
     async def test_create_groq_client_no_key(self):
         """Test create_groq_client returns None without API key."""
-        with patch('src.services.llm_providers.get_provider_manager') as mock_manager:
+        with patch("src.services.llm_providers.get_provider_manager") as mock_manager:
             mock_manager.return_value.get_config.return_value = None
 
             client = await create_groq_client()
@@ -282,7 +269,7 @@ class TestProviderFactory:
 
     def test_create_gemini_client_no_key(self):
         """Test create_gemini_client returns None without API key."""
-        with patch('src.services.llm_providers.get_provider_manager') as mock_manager:
+        with patch("src.services.llm_providers.get_provider_manager") as mock_manager:
             mock_manager.return_value.get_config.return_value = None
 
             client = create_gemini_client()

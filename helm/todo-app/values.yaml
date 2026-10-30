@@ -12,7 +12,6 @@ image:
 
 service:
   type: ClusterIP
-  port: 80
   backend:
     port: 8000
   frontend:
@@ -25,26 +24,16 @@ ingress:
   tls: true
   certIssuer: letsencrypt-prod
 
-database:
-  type: managed
-  host: "your-managed-db-host.com"
-  port: 5432
-  name: todo_db
-  user: todo
-  passwordSecretName: db-password
-  # For local postgres-operator:
-  # type: postgres-operator
-  # operator version
+backendSecrets:
+  # Existing Secret containing DATABASE_URL, SECRET_KEY, and SESSION_SECRET.
+  existingSecret: todo-backend-secrets
 
 kafka:
   enabled: true
-  replicas: 3
-  storage: 10Gi
   brokers: "kafka:9092"
 
 dapr:
   enabled: true
-  version: "1.13.0"
   pubsubName: "todo-pubsub"
   stateStoreName: "todo-statestore"
 
@@ -65,7 +54,6 @@ resources:
       cpu: 250m
 
 autoscaling:
-  enabled: true
   backend:
     minReplicas: 2
     maxReplicas: 10
@@ -76,21 +64,6 @@ autoscaling:
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
-
-cloud:
-  provider: digitalocean
-  region: nyc3
-  nodeSize: s-2vcpu-4gb
-  nodeCount: 3
-
-monitoring:
-  enabled: true
-  prometheus:
-    enabled: true
-    retention: 15d
-  grafana:
-    enabled: true
-    adminPassword: admin
 
 nodeSelector: {}
 tolerations: []
