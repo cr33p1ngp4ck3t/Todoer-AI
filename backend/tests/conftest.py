@@ -7,7 +7,13 @@ os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["SECRET_KEY"] = "isolated-test-secret-key"
 os.environ["SESSION_SECRET"] = "isolated-test-session-secret"
 os.environ["PYTHON_DOTENV_DISABLED"] = "1"
-for key in ("GROQ_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY"):
+for key in (
+    "GROQ_API_KEY",
+    "GEMINI_API_KEY",
+    "OPENAI_API_KEY",
+    "GOOGLE_API_KEY",
+    "SENTRY_DSN",
+):
     os.environ.pop(key, None)
 
 import pytest  # noqa: E402

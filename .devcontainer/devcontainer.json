@@ -1,0 +1,19 @@
+{
+  "name": "Todoer AI",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.yml"],
+  "service": "backend",
+  "runServices": ["postgres", "backend", "frontend"],
+  "workspaceFolder": "/workspaces/todo-app",
+  "initializeCommand": [
+    "docker", "run", "--rm", "--mount",
+    "type=bind,source=${localWorkspaceFolder},target=/workspace",
+    "--workdir", "/workspace", "python:3.12-slim",
+    "python", "scripts/init_local_env.py"
+  ],
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {"version": "22"}
+  },
+  "remoteUser": "appuser",
+  "forwardPorts": [3000, 8000],
+  "shutdownAction": "stopCompose"
+}

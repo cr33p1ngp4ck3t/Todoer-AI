@@ -19,16 +19,36 @@ Install Docker with Compose v2 or newer, then clone this repository:
 ```sh
 git clone https://github.com/cr33p1ngp4ck3t/Todoer-AI.git
 cd Todoer-AI
-cp .env.example .env
+docker run --rm --mount type=bind,source="$(pwd)",target=/workspace --workdir /workspace python:3.12-slim python scripts/init_local_env.py
 ```
 
-In PowerShell, use `Copy-Item .env.example .env`. Generate three separate values with `python -c "import secrets; print(secrets.token_hex(32))"` and put them in `.env` as `POSTGRES_PASSWORD`, `SECRET_KEY`, and `SESSION_SECRET`. Hex passwords avoid reserved characters in the database URL. Optional provider credentials can stay empty.
+In PowerShell replace `$(pwd)` with `${PWD}`. The initializer prints `Created .env with local credentials.` and generates three independent random hex secrets. It preserves an existing `.env` and prints `Using existing .env.` on subsequent runs. Optional provider credentials can stay empty. If an existing env file has empty required values, fill them before starting Compose. Python users can run `python scripts/init_local_env.py` directly.
 
 ```sh
 docker compose up --build --wait
 ```
 
+Successful startup exits 0 and ends with all three containers healthy. With the
+project name `todo-policy-validation`, the clean-clone validation printed:
+
+```text
+Container todo-policy-validation-postgres-1 Healthy
+Container todo-policy-validation-backend-1 Healthy
+Container todo-policy-validation-frontend-1 Healthy
+```
+
+Compose prefixes, spacing, ordering, elapsed times, and build output vary by version;
+the three `Healthy` results are required. Run `python scripts/smoke_test.py` after
+startup to check registration, login, task operations, and refresh tokens. Its exact
+success output is:
+
+```text
+Registration, login, task CRUD, and token refresh passed.
+```
+
 Open <http://localhost:3000>, create an account, and sign in. API documentation is at <http://localhost:8000/docs>. Check database readiness at <http://localhost:8000/health> or `/health/ready`; `/health/live` checks only whether the process is alive.
+
+The build is defined by [backend/Dockerfile](backend/Dockerfile) and [frontend/Dockerfile](frontend/Dockerfile), referenced in [docker-compose.yml](docker-compose.yml). See [local architecture](docs/ARCHITECTURE.md) for the service map. For VS Code or Codespaces, use the included [devcontainer](.devcontainer/devcontainer.json): **Reopen in Container** or **Create codespace** generates credentials and starts the same stack automatically, with no manual env copying.
 
 Compose starts PostgreSQL, waits for it to become healthy, then starts the API and frontend. Ports bind to localhost. The API creates tables on first startup. PostgreSQL data persists across `docker compose down`; **`docker compose down --volumes` permanently deletes local data**. This is a local development setup, not a production deployment recipe.
 
@@ -142,7 +162,7 @@ uv run --project backend --locked pytest
 uv run --project backend --locked pip-audit --disable-pip --require-hashes -r backend/requirements.txt
 ```
 
-Pytest uses a fresh in-memory SQLite database for each test, overrides the API session dependency, disables dotenv loading, and mocks AI providers. No live server, database credentials, or AI keys are needed. Coverage is printed and written to `coverage.xml`; the minimum is 60% across backend source.
+Pytest uses a fresh in-memory SQLite database for each test, overrides the API session dependency, disables dotenv loading, and mocks AI providers. No live server, database credentials, or AI keys are needed. Coverage is printed and written to `coverage.xml`; the minimum is 80% across backend source. Provider fallback/streaming and MCP failure/ownership paths have dedicated tests. JSON request/user logging and optional Sentry capture are tested without external delivery; see [observability configuration](docs/ARCHITECTURE.md#api-observability).
 
 Frontend checks:
 
@@ -163,7 +183,7 @@ The unit gate uses Node's built-in test runner: 90% lines/functions and 80% bran
 
 On Linux, install browser system dependencies with `npx playwright install --with-deps chromium`. Playwright starts its configured local web server and tests authentication, task clearing and recurrence, AI previews, projects, backups, pending-save protection, request races, and mobile/dark navigation with mocked API responses. To exercise the real Compose backend instead, start the stack and run `python scripts/smoke_test.py` from the root. The smoke test creates a unique account and removes its test task; use a disposable local database.
 
-GitHub Actions runs backend and frontend checks on every pull request and push to `main`, plus Helm lint/render, strict Kubernetes 1.31 schema checks with checksum-verified kubeconform v0.7.0, and a Compose build/start/API smoke test. Dapr `Component` resources require separate CRD validation and are explicitly excluded from the built-in schema check. Pod-policy tests verify app image users, dropped capabilities, and disabled privilege escalation. Schema checks do not constitute a security audit. Hosted CI results must be checked on GitHub after pushing.
+GitHub Actions runs backend and frontend checks on every pull request and push to `main`, plus Helm lint/render, [kube-score v1.19.0 policy scanning with a Critical severity gate](helm/todo-app/README.md), strict Kubernetes 1.31 schema checks with checksum-verified kubeconform v0.7.0, and a Compose build/start/API smoke test. Dapr `Component` resources require separate CRD validation and are explicitly excluded from the built-in schema check. Pod-policy tests verify app image users, dropped capabilities, and disabled privilege escalation. Hosted CI results must be checked on GitHub after pushing.
 
 ## Repository layout
 

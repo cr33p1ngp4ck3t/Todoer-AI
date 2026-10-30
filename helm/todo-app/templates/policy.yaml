@@ -1,0 +1,28 @@
+{{- range $app := list "backend" "frontend" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "todo-app.fullname" $ }}-{{ $app }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "todo-app.selectorLabels" $ | nindent 6 }}
+      app: {{ $app }}
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: {{ if eq $app "backend" }}8000{{ else }}3000{{ end }}
+          protocol: TCP
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "todo-app.fullname" $ }}-{{ $app }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "todo-app.selectorLabels" $ | nindent 6 }}
+      app: {{ $app }}
+{{- end }}

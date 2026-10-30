@@ -32,7 +32,7 @@ def test_application_pod_security_matches_image_user(
     assert len(policies) == 1 + container_count
     pod, *containers = policies
     image_definition = (ROOT / component / "Dockerfile").read_text()
-    uid = int(re.search(r"useradd.*?-u (\d+)", image_definition).group(1))
+    uid = int(re.findall(r"useradd.*?-u (\d+)", image_definition)[-1])
     assert pod["runAsUser"] == uid > 0
     assert pod["runAsNonRoot"] is True
     assert pod["seccompProfile"]["type"] == "RuntimeDefault"

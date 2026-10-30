@@ -102,13 +102,6 @@ Remember: You have access to the user's actual task data through your tools."""
         )
 
         if (
-            provider_to_try == LLMProvider.GROQ
-            and primary_config.provider == LLMProvider.GROQ
-        ):
-            client = await self._create_groq_client(primary_config)
-            return client, LLMProvider.GROQ
-
-        if (
             provider_to_try == LLMProvider.GEMINI
             and primary_config.provider == LLMProvider.GEMINI
         ):
@@ -121,7 +114,7 @@ Remember: You have access to the user's actual task data through your tools."""
                 client = await self._create_groq_client(primary_config)
                 return client, LLMProvider.GROQ
             except Exception as e:
-                logger.warning(f"Failed to create Groq client: {e}")
+                logger.warning("Failed to create Groq client (%s)", type(e).__name__)
 
         # Try fallback provider
         if fallback_config:

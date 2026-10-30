@@ -3,6 +3,7 @@ import os
 import secrets
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -11,19 +12,27 @@ from sqlmodel import select
 from src.api import chat, conversations, oauth, projects, tasks, token_refresh, users
 from src.lib.database import get_session_sync as get_session
 from src.lib.database import init_db
-from src.lib.logging import JSONFormatter
+from src.lib.logging_config import RequestContextMiddleware, setup_logging
 from starlette.middleware.sessions import SessionMiddleware
 
-# Configure JSON logging
 logger = logging.getLogger("todo-api")
-handler = logging.StreamHandler()
-handler.setFormatter(JSONFormatter())
-logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown events."""
+    setup_logging()
+    sentry_dsn = os.getenv("SENTRY_DSN", "").strip()
+    if sentry_dsn:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            default_integrations=False,
+            auto_enabling_integrations=False,
+            send_default_pii=False,
+            include_local_variables=False,
+            environment=os.getenv("SENTRY_ENVIRONMENT", "development"),
+            release=os.getenv("SENTRY_RELEASE") or None,
+        )
     init_db()
 
     # Validate database connection at startup
@@ -54,10 +63,22 @@ app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler to log all unhandled exceptions."""
-    logger.exception("Unhandled request error")
+    context = getattr(request.state, "log_context", {})
+    logger.error(
+        "Unhandled request error",
+        exc_info=(type(exc), exc, exc.__traceback__),
+        extra=context,
+    )
+    if os.getenv("SENTRY_DSN", "").strip():
+        with sentry_sdk.new_scope() as scope:
+            scope.set_tag("request_id", context.get("request_id"))
+            if context.get("user_id"):
+                scope.set_user({"id": context["user_id"]})
+            sentry_sdk.capture_exception(exc)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Internal server error"},
+        headers={"X-Request-ID": context["request_id"]} if context else None,
     )
 
 
@@ -86,7 +107,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
+app.add_middleware(RequestContextMiddleware)
 
 # Include routers
 app.include_router(tasks.router)

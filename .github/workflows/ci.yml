@@ -53,6 +53,9 @@ jobs:
       - run: npm run format:check
       - run: npm run test:unit
       - run: npm run build
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
       - run: npx playwright install --with-deps chromium
       - run: npm test
       - run: npm audit --omit=dev --audit-level=high
@@ -72,6 +75,8 @@ jobs:
           version: v3.17.3
       - run: helm lint --strict helm/todo-app
       - run: helm template todo helm/todo-app > /tmp/todo-manifests.yaml
+      - name: Scan Kubernetes security policies (Critical gate)
+        run: docker run --rm -v /tmp:/manifests:ro zegl/kube-score:v1.19.0 score /manifests/todo-manifests.yaml
       - name: Validate Kubernetes schemas
         run: |
           tool_dir=$(mktemp -d)
@@ -84,13 +89,7 @@ jobs:
           # Dapr Components require their own installed CRD schemas; all built-in kinds must validate.
           "$tool_dir/kubeconform" -strict -summary -kubernetes-version 1.31.0 -skip Component /tmp/todo-manifests.yaml k8s/
       - name: Generate ephemeral local credentials
-        run: |
-          python - <<'PY'
-          import secrets
-          from pathlib import Path
-          keys = ("POSTGRES_PASSWORD", "SECRET_KEY", "SESSION_SECRET")
-          Path(".env").write_text("".join(f"{key}={secrets.token_hex(32)}\n" for key in keys))
-          PY
+        run: python scripts/init_local_env.py
       - run: docker compose config --quiet
       - run: docker compose up --build --wait --wait-timeout 180
       - name: Check the running stack

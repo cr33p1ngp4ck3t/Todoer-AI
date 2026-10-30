@@ -28,7 +28,7 @@ test.beforeEach(async ({ page }) => {
       accepted: true,
     },
   ]
-  await page.route('**/api/**', async (route) => {
+  await page.route('http://127.0.0.1:3100/api/**', async (route) => {
     const request = route.request()
     const url = new URL(request.url())
     const apiPath = url.pathname.slice('/api'.length)

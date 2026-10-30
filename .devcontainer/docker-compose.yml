@@ -1,0 +1,17 @@
+services:
+  backend:
+    build:
+      target: development
+    environment:
+      UV_PROJECT_ENVIRONMENT: /app/.venv
+      UV_NO_SYNC: "1"
+    volumes:
+      - .:/workspaces/todo-app
+      - ./backend/src:/app/src
+    command: [/app/.venv/bin/uvicorn, src.main:app, --host, 0.0.0.0, --port, "8000", --reload]
+
+  frontend:
+    build:
+      args:
+        NEXT_PUBLIC_API_URL: /api
+        INTERNAL_API_URL: http://backend:8000

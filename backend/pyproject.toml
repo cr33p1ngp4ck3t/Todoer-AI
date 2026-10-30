@@ -12,6 +12,7 @@ dependencies = [
   "openai>=1.50.0", "google-generativeai>=0.8.0",
   "dapr>=1.13.0", "dapr-ext-fastapi>=1.13.0", "kafka-python>=2.0.0",
   "sse-starlette>=2.0.0",
+  "sentry-sdk>=2.0,<3",
 ]
 
 [dependency-groups]

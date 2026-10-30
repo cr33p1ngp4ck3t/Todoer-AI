@@ -13,6 +13,7 @@ from joserfc.jwk import OctKey
 from passlib.context import CryptContext
 from sqlmodel import Session, select
 from src.lib.database import get_session
+from src.lib.logging_config import request_context
 from src.models.refresh_token import RefreshToken
 from src.models.user import User
 
@@ -63,6 +64,9 @@ async def get_current_user(
     user = session.get(User, user_id)
     if not user or not user.is_active:
         raise credentials_exception
+    context = request_context.get()
+    if context:
+        context["user_id"] = str(user.id)
     return user
 
 

@@ -7,6 +7,16 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --require-hashes -r requirements.txt
 
+FROM builder AS development
+COPY --from=ghcr.io/astral-sh/uv:0.12.1 /uv /usr/local/bin/uv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked
+COPY src ./src
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+HEALTHCHECK --interval=5s --timeout=10s --start-period=5s --retries=12 \
+    CMD ["python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/health/ready', timeout=5)"]
+
 # Production stage
 FROM python:3.12-slim
 
@@ -21,7 +31,7 @@ COPY alembic.ini .
 COPY alembic ./alembic
 
 # Create non-root user
-RUN useradd -m -u 1000 appuser && \
+RUN useradd -m -u 10001 appuser && \
     chown -R appuser:appuser /app
 USER appuser
 

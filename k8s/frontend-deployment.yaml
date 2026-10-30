@@ -17,7 +17,7 @@ spec:
       annotations:
         dapr.io/enabled: "false"
     spec:
-      securityContext: {"runAsNonRoot": true, "runAsUser": 1001, "seccompProfile": {"type": "RuntimeDefault"}}
+      securityContext: {"runAsNonRoot": true, "runAsUser": 10001, "seccompProfile": {"type": "RuntimeDefault"}}
       containers:
       - name: frontend
         securityContext: {"allowPrivilegeEscalation": false, "capabilities": {"drop": ["ALL"]}}
