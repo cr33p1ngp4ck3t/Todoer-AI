@@ -220,7 +220,7 @@ export const api = {
       try {
         await fetch(`${API_URL}/tasks`, {
           method: 'HEAD',
-          headers: getHeaders(),
+          headers: new Headers(),
         })
       } catch (error) {
         // Silent fail - don't alert users about ping failures
