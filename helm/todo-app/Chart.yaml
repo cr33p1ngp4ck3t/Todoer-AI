@@ -1,6 +1,6 @@
 apiVersion: v2
 name: todo-app
-description: A Helm chart for Todo Application with Kubernetes and Dapr integration
+description: A Helm chart for Todoer AI with Kubernetes and Dapr integration
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
@@ -10,6 +10,6 @@ keywords:
   - dapr
   - kafka
   - event-driven
-home: https://github.com/cr33p1ngp4ck3t/todo-app
+home: https://github.com/cr33p1ngp4ck3t/Todoer-AI
 sources:
-  - https://github.com/cr33p1ngp4ck3t/todo-app
+  - https://github.com/cr33p1ngp4ck3t/Todoer-AI

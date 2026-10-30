@@ -14,6 +14,7 @@ from src.models.user import User
 from src.models.task import Task, Tag
 from src.models.conversation import Conversation
 from src.models.message import Message
+from src.models.project import Project, ProjectMember, TaskImport
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

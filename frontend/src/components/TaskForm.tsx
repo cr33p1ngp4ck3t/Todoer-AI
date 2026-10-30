@@ -1,10 +1,19 @@
 'use client'
 
-import { useState } from 'react'
-import { api } from '../services/api'
-import { Sparkles, Loader2, ListChecks, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Sparkles, Loader2, ListChecks, X, Plus } from 'lucide-react'
+import {
+  api,
+  type TaskCreate,
+  type Project,
+  type ProjectMember,
+  type Priority,
+  type Recurrence,
+} from '../services/api'
+import { toLocalDateTime, toUtcDateTime } from '../lib/task-dates'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import { DialogTitle, DialogDescription } from './ui/dialog'
 import {
   Select,
   SelectTrigger,
@@ -12,323 +21,424 @@ import {
   SelectItem,
   SelectValue,
 } from './ui/select'
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-import { DialogTitle, DialogDescription } from './ui/dialog'
-import { Badge } from './ui/badge'
-import { cn } from '@/lib/utils'
 
 export interface TaskCreateProps {
-  onCreate: (task: {
-    title: string
-    description?: string
-    priority: 'low' | 'medium' | 'high'
-    due_date?: string
-    tags?: string[]
-  }) => void
+  onCreate: (task: TaskCreate) => Promise<void> | void
   creating?: boolean
+  projects?: Project[]
+  selectedProjectId?: string | null
+  members?: ProjectMember[]
+  initialText?: string
+  onBusyChange?: (busy: boolean) => void
 }
 
 export default function TaskForm({
   onCreate,
   creating = false,
+  projects = [],
+  selectedProjectId = null,
+  members = [],
+  initialText = '',
+  onBusyChange,
 }: TaskCreateProps) {
   const [mode, setMode] = useState<'manual' | 'ai'>('ai')
-  const [smartText, setSmartText] = useState('')
-  const [isParsing, setIsParsing] = useState(false)
-
+  const [smartText, setSmartText] = useState(initialText)
+  const [parsing, setParsing] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
+  const [priority, setPriority] = useState<Priority>('medium')
   const [dueDate, setDueDate] = useState('')
+  const [recurrence, setRecurrence] = useState<Recurrence | ''>('')
+  const [timezone, setTimezone] = useState(
+    Intl.DateTimeFormat().resolvedOptions().timeZone
+  )
+  const [projectId, setProjectId] = useState(selectedProjectId || '')
+  const [projectMembers, setProjectMembers] = useState(members)
+  const [loadingMembers, setLoadingMembers] = useState(false)
+  const [assigneeId, setAssigneeId] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const busy = parsing || saving || creating || loadingMembers
 
-  const handleSmartSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!smartText.trim() || isParsing) return
+  useEffect(() => {
+    onBusyChange?.(busy)
+  }, [busy, onBusyChange])
 
-    setIsParsing(true)
+  async function changeProject(value: string) {
+    setProjectId(value === 'personal' ? '' : value)
+    setAssigneeId('')
+    setProjectMembers([])
+    setError('')
+    if (value === 'personal') return
+    setLoadingMembers(true)
     try {
-      const parsed = await api.chat.smartParse(smartText)
+      setProjectMembers((await api.projects.get(value)).members)
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : 'Could not load project members'
+      )
+    } finally {
+      setLoadingMembers(false)
+    }
+  }
 
-      // Switch to manual mode with pre-filled values for confirmation
-      setTitle(parsed.title || '')
-      setDescription(parsed.description || '')
-      setPriority((parsed.priority as 'low' | 'medium' | 'high') || 'medium')
-      setTags(parsed.tags || [])
+  async function parse(event: React.FormEvent) {
+    event.preventDefault()
+    if (!smartText.trim() || busy) return
+    setParsing(true)
+    setError('')
+    try {
+      const draft = await api.chat.smartParse(smartText)
+      setTitle(draft.title)
+      setDescription(draft.description || '')
+      setPriority(draft.priority || 'medium')
+      setDueDate(toLocalDateTime(draft.due_date))
+      setRecurrence(draft.recurrence || '')
+      setTimezone(
+        draft.recurrence_timezone ||
+          Intl.DateTimeFormat().resolvedOptions().timeZone
+      )
+      setTags(draft.tags || [])
+      setNotice(
+        draft.warnings?.length
+          ? draft.warnings.join(' ')
+          : 'Draft ready. Review the details before creating your task.'
+      )
       setMode('manual')
-    } catch (error) {
-      console.error('Failed to parse task:', error)
-      // On error, just use the text as title in manual mode
-      setTitle(smartText.trim())
+    } catch (cause) {
+      setTitle(smartText.trim().slice(0, 255))
+      setDescription('')
+      setDueDate('')
+      setRecurrence('')
+      setTags([])
+      setNotice(
+        'AI drafting is unavailable. Your text is preserved; review the details below.'
+      )
+      setError(cause instanceof Error ? cause.message : 'Could not draft task')
       setMode('manual')
     } finally {
-      setIsParsing(false)
+      setParsing(false)
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!title.trim()) return
-
-    onCreate({
-      title: title.trim(),
-      description: description.trim() || undefined,
-      priority,
-      due_date: dueDate || undefined,
-      tags: tags.length > 0 ? tags : undefined,
-    })
-
-    // Reset form
-    setTitle('')
-    setDescription('')
-    setPriority('medium')
-    setDueDate('')
-    setTags([])
-    setTagInput('')
-    setSmartText('')
-    setMode('ai')
-  }
-
-  const addTag = () => {
-    const trimmed = tagInput.trim().toLowerCase()
-    if (trimmed && !tags.includes(trimmed)) {
-      setTags([...tags, trimmed])
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    if (!title.trim() || busy) return
+    setSaving(true)
+    setError('')
+    try {
+      await onCreate({
+        title: title.trim(),
+        description: description.trim() || null,
+        priority,
+        due_date: toUtcDateTime(dueDate),
+        recurrence: recurrence || null,
+        recurrence_timezone: timezone,
+        project_id: projectId || null,
+        assignee_id: assigneeId || null,
+        tags,
+      })
+      setTitle('')
+      setDescription('')
+      setPriority('medium')
+      setDueDate('')
+      setRecurrence('')
+      setAssigneeId('')
+      setTags([])
+      setTagInput('')
+      setSmartText('')
+      setNotice('')
+      setMode('ai')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not create task')
+    } finally {
+      setSaving(false)
     }
-    setTagInput('')
   }
 
-  const removeTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag))
+  function addTag() {
+    const tag = tagInput.trim().toLowerCase()
+    if (tag && !tags.includes(tag) && tags.length < 20) setTags([...tags, tag])
+    setTagInput('')
   }
 
   return (
-    <>
-      <DialogTitle className="sr-only">Create New Task</DialogTitle>
-      <DialogDescription className="sr-only">
-        Create a new task using AI smart parsing or manual entry
+    <div className="task-editor">
+      <DialogTitle>Create New Task</DialogTitle>
+      <DialogDescription>
+        Turn an idea into a clear next step.
       </DialogDescription>
-      <Card className="border-0 shadow-none">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Create New Task</CardTitle>
-            <div className="flex gap-1 rounded-md bg-secondary p-1">
-              <Button
-                size="sm"
-                variant={mode === 'ai' ? 'default' : 'ghost'}
-                onClick={() => setMode('ai')}
-                className={cn(
-                  mode === 'ai' ? 'bg-card/80 shadow-sm' : '',
-                  'cursor-pointer'
-                )}
+      <div className="editor-tabs" aria-label="Task entry mode">
+        <button
+          type="button"
+          aria-pressed={mode === 'ai'}
+          onClick={() => setMode('ai')}
+          disabled={busy}
+        >
+          <Sparkles size={15} /> AI Smart
+        </button>
+        <button
+          type="button"
+          aria-pressed={mode === 'manual'}
+          onClick={() => setMode('manual')}
+          disabled={busy}
+        >
+          <ListChecks size={15} /> Manual
+        </button>
+      </div>
+      {mode === 'ai' ? (
+        <form onSubmit={parse}>
+          <label className="field-label" htmlFor="smart-text">
+            What needs to get done?
+          </label>
+          <textarea
+            id="smart-text"
+            className="field-textarea"
+            value={smartText}
+            onChange={(event) => setSmartText(event.target.value)}
+            rows={5}
+            maxLength={4000}
+            required
+            placeholder="Prepare the launch brief tomorrow at 10am, high priority, #work"
+            disabled={busy}
+          />
+          <p className="editor-note">
+            AI drafts the details. You review and confirm before anything is
+            saved.
+          </p>
+          <div className="editor-footer">
+            <Button type="submit" disabled={!smartText.trim() || busy}>
+              {parsing ? <Loader2 className="animate-spin" /> : <Sparkles />}
+              {parsing ? 'Drafting...' : 'Smart Parse'}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <form onSubmit={submit}>
+          {notice ? (
+            <p className="editor-note" role="status">
+              {notice}
+            </p>
+          ) : null}
+          {error ? (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="form-grid">
+            <div className="col-span-full">
+              <label className="field-label" htmlFor="title">
+                Title
+              </label>
+              <Input
+                id="title"
+                className="field-input"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                required
+                maxLength={255}
+                disabled={busy}
+                placeholder="What needs to be done?"
+              />
+            </div>
+            <div className="col-span-full">
+              <label className="field-label" htmlFor="description">
+                Description
+              </label>
+              <textarea
+                id="description"
+                className="field-textarea"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={2}
+                maxLength={1000}
+                disabled={busy}
+                placeholder="Add context, links, or a few notes"
+              />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="priority">
+                Priority
+              </label>
+              <Select
+                value={priority}
+                onValueChange={(value) => setPriority(value as Priority)}
+                disabled={busy}
               >
-                <Sparkles className="h-3.5 w-3.5" />
-                AI Smart
-              </Button>
-              <Button
-                size="sm"
-                variant={mode === 'manual' ? 'default' : 'ghost'}
-                onClick={() => setMode('manual')}
-                className={cn(
-                  mode === 'manual' ? 'bg-card/80 shadow-sm' : '',
-                  'cursor-pointer'
-                )}
+                <SelectTrigger id="priority" className="field-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="field-label" htmlFor="due_date">
+                Due Date
+              </label>
+              <Input
+                id="due_date"
+                className="field-input"
+                type="datetime-local"
+                value={dueDate}
+                onChange={(event) => setDueDate(event.target.value)}
+                required={!!recurrence}
+                disabled={busy}
+              />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="recurrence">
+                Repeat
+              </label>
+              <Select
+                value={recurrence || 'none'}
+                onValueChange={(value) =>
+                  setRecurrence(value === 'none' ? '' : (value as Recurrence))
+                }
+                disabled={busy}
               >
-                <ListChecks className="h-3.5 w-3.5" />
-                Manual
-              </Button>
+                <SelectTrigger id="recurrence" className="field-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Does not repeat</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="field-label" htmlFor="project">
+                Project
+              </label>
+              <Select
+                value={projectId || 'personal'}
+                onValueChange={changeProject}
+                disabled={busy}
+              >
+                <SelectTrigger id="project" className="field-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="personal">Personal tasks</SelectItem>
+                  {projects
+                    .filter((project) => project.role !== 'viewer')
+                    .map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {projectId ? (
+              <div className="col-span-full">
+                <label className="field-label" htmlFor="assignee">
+                  Assignee
+                </label>
+                <Select
+                  value={assigneeId || 'none'}
+                  onValueChange={(value) =>
+                    setAssigneeId(value === 'none' ? '' : value)
+                  }
+                  disabled={busy}
+                >
+                  <SelectTrigger id="assignee" className="field-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {projectMembers
+                      .filter((member) => member.accepted)
+                      .map((member) => (
+                        <SelectItem key={member.user_id} value={member.user_id}>
+                          {member.username}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+            <div className="col-span-full">
+              <label className="field-label" htmlFor="tags">
+                Tags
+              </label>
+              <div className="tag-entry">
+                <Input
+                  id="tags"
+                  className="field-input"
+                  value={tagInput}
+                  onChange={(event) => setTagInput(event.target.value)}
+                  maxLength={50}
+                  disabled={busy}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      addTag()
+                    }
+                  }}
+                  placeholder="Add a tag"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label="Add tag"
+                  onClick={addTag}
+                  disabled={busy || !tagInput.trim()}
+                >
+                  <Plus />
+                </Button>
+              </div>
+              <div className="tag-list">
+                {tags.map((tag) => (
+                  <span className="tag-chip" key={tag}>
+                    {tag}
+                    <button
+                      type="button"
+                      aria-label={`Remove tag ${tag}`}
+                      onClick={() =>
+                        setTags(tags.filter((item) => item !== tag))
+                      }
+                      disabled={busy}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          {mode === 'ai' ? (
-            <form onSubmit={handleSmartSubmit}>
-              <div className="mb-4">
-                <textarea
-                  value={smartText}
-                  onChange={(e) => setSmartText(e.target.value)}
-                  placeholder="Example: Buy milk tomorrow high priority with #groceries tag..."
-                  rows={3}
-                  className={cn(
-                    'shadow-xs min-w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
-                    'focus-visible:ring-[3px]',
-                    'aria-invalid:ring-destructive/20 aria-invalid:border-destructive'
-                  )}
-                  required
-                />
-                <p className="mt-2 text-xs italic text-muted-foreground">
-                  Wait, I&apos;ll extract the details for you to review.
-                </p>
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-secondary"
-                disabled={!smartText.trim() || isParsing}
-              >
-                {isParsing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Smart Parse
-                  </>
-                )}
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              {/* Title Input */}
-              <div className="mb-4">
-                <label
-                  htmlFor="title"
-                  className="mb-1 block text-sm font-medium"
-                >
-                  Title <span className="text-destructive">*</span>
-                </label>
-                <Input
-                  id="title"
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="What needs to be done?"
-                  required
-                  className="border border-border"
-                />
-              </div>
-
-              {/* Description Input */}
-              <div className="mb-4">
-                <label
-                  htmlFor="description"
-                  className="mb-1 block text-sm font-medium"
-                >
-                  Description
-                </label>
-                <textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Add more details (optional)..."
-                  rows={2}
-                  className={cn(
-                    'shadow-xs min-w-full rounded-md bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
-                    'border border-border focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
-                  )}
-                />
-              </div>
-
-              <div className="mb-4 grid grid-cols-2 gap-4">
-                {/* Priority Selector */}
-                <div>
-                  <label
-                    htmlFor="priority"
-                    className="mb-1 block text-sm font-medium"
-                  >
-                    Priority
-                  </label>
-                  <Select
-                    value={priority}
-                    onValueChange={(v) =>
-                      setPriority(v as 'low' | 'medium' | 'high')
-                    }
-                  >
-                    <SelectTrigger className="w-full border border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Due Date Picker */}
-                <div>
-                  <label
-                    htmlFor="due_date"
-                    className="mb-1 block text-sm font-medium"
-                  >
-                    Due Date
-                  </label>
-                  <Input
-                    id="due_date"
-                    type="datetime-local"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="border border-border"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-4">
-                {/* Tags Input */}
-                <label className="mb-1 block text-sm font-medium">Tags</label>
-                <Input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) =>
-                    e.key === 'Enter' && (e.preventDefault(), addTag())
-                  }
-                  placeholder="Add tag and press Enter..."
-                  className="border border-border"
-                />
-              </div>
-
-              {/* Tags Display */}
-              {tags.length > 0 && (
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="gap-1">
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 border border-border"
-                  type="button"
-                  onClick={() => {
-                    setMode('ai')
-                    setSmartText('')
-                  }}
-                  disabled={creating || isParsing}
-                >
-                  Back to AI
-                </Button>
-                <Button
-                  className="flex-1 bg-secondary"
-                  type="submit"
-                  disabled={!title.trim() || creating}
-                >
-                  {creating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Create Task'
-                  )}
-                </Button>
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-    </>
+          {recurrence ? (
+            <p className="editor-note">
+              Repeats in {timezone}. Completing this task creates its next
+              occurrence.
+            </p>
+          ) : null}
+          <div className="editor-footer">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMode('ai')}
+              disabled={busy}
+            >
+              Back to AI
+            </Button>
+            <Button type="submit" disabled={!title.trim() || busy}>
+              {saving || creating ? <Loader2 className="animate-spin" /> : null}
+              {saving || creating ? 'Creating...' : 'Create Task'}
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
   )
 }

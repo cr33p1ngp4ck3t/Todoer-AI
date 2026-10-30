@@ -1,15 +1,26 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
-import { Task } from '../services/api'
-import { Check, Edit, Trash2, Loader2, Calendar } from 'lucide-react'
-import { Badge } from './ui/badge'
+import {
+  Check,
+  Pencil,
+  Trash2,
+  Loader2,
+  CalendarDays,
+  Repeat2,
+  UserRound,
+} from 'lucide-react'
+import type { Task } from '../services/api'
+import { parseTaskDate } from '../lib/task-dates'
 
 interface TaskItemProps {
   task: Task
-  onStatusToggle: (id: string) => void
+  onStatusToggle: (id: string) => Promise<void>
   onEdit: (id: string) => void
-  onDelete: (id: string) => void
+  onDelete: (id: string) => Promise<void>
+  readOnly?: boolean
+  assigneeName?: string
+  now?: Date
 }
 
 export default function TaskItem({
@@ -17,184 +28,99 @@ export default function TaskItem({
   onStatusToggle,
   onEdit,
   onDelete,
+  readOnly = false,
+  assigneeName,
+  now = new Date(),
 }: TaskItemProps) {
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [isToggling, setIsToggling] = useState(false)
-  const isCompleted = task.status === 'completed'
-  const now = new Date()
+  const [busy, setBusy] = useState(false)
+  const completed = task.status === 'completed'
+  const deadline = task.due_date ? parseTaskDate(task.due_date) : null
+  const overdue = deadline && !completed && deadline.getTime() < now.getTime()
+  const dateText = deadline?.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 
-  // Check if task is overdue
-  const isOverdue =
-    task.due_date && !isCompleted && new Date(task.due_date) < now
-  const isDueSoon =
-    task.due_date &&
-    !isCompleted &&
-    !isOverdue &&
-    new Date(task.due_date).getTime() < now.getTime() + 24 * 60 * 60 * 1000 // within 24 hours
-
-  // Format due date for display
-  const formatDueDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const tomorrow = new Date(now)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-
-    const isToday = date.toDateString() === now.toDateString()
-    const isTomorrow = date.toDateString() === tomorrow.toDateString()
-
-    if (isToday) {
-      return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-    }
-    if (isTomorrow) {
-      return `Tomorrow at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-    }
-    return date.toLocaleDateString([], {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
-  const handleDelete = async () => {
-    if (isDeleting) return
-    setIsDeleting(true)
+  async function run(action: () => Promise<void>) {
+    if (busy) return
+    setBusy(true)
     try {
-      await onDelete(task.id)
+      await action()
+    } catch {
+      /* The dashboard displays the request error. */
     } finally {
-      setIsDeleting(false)
+      setBusy(false)
     }
   }
-
-  const handleToggle = async () => {
-    if (isToggling) return
-    setIsToggling(true)
-    try {
-      await onStatusToggle(task.id)
-    } finally {
-      setIsToggling(false)
-    }
-  }
-
-  const priorityBadgeVariant =
-    task.priority === 'high'
-      ? 'destructive'
-      : task.priority === 'medium'
-        ? 'default'
-        : 'secondary'
 
   return (
-    <li
-      className={`rounded-lg border border-border bg-card p-4 shadow-sm transition-all ${
-        isCompleted ? 'opacity-60' : 'hover:shadow-md'
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        {/* Status Checkbox */}
-        <button
-          onClick={handleToggle}
-          disabled={isToggling}
-          aria-label={`Mark task ${task.title} as ${isCompleted ? 'pending' : 'completed'}`}
-          className={`flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border-2 transition-colors ${
-            isCompleted
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border hover:border-muted-foreground'
-          } ${isToggling ? 'opacity-50' : ''}`}
-        >
-          {isToggling ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            isCompleted && <Check className="h-3 w-3" />
+    <article className={`task-row ${completed ? 'completed' : ''}`}>
+      <button
+        className={`task-check ${completed ? 'checked' : ''}`}
+        aria-label={`Mark task ${task.title} as ${completed ? 'pending' : 'completed'}`}
+        disabled={busy || readOnly}
+        onClick={() => run(() => onStatusToggle(task.id))}
+      >
+        {busy ? (
+          <Loader2 size={12} className="animate-spin" />
+        ) : completed ? (
+          <Check size={12} strokeWidth={3} />
+        ) : null}
+      </button>
+      <div className="task-text">
+        <h3 className="task-title">{task.title}</h3>
+        {task.description && (
+          <p className="task-description">{task.description}</p>
+        )}
+        <div className="task-meta">
+          {deadline && (
+            <span className={overdue ? 'overdue' : ''}>
+              <CalendarDays size={11} />
+              {overdue ? `Overdue: ${dateText}` : dateText}
+            </span>
           )}
-        </button>
-
-        {/* Task Content */}
-        <div className="min-w-0 flex-1">
-          <div
-            className={`font-medium ${isCompleted ? 'text-text-muted line-through' : 'text-foreground'}`}
-          >
-            {task.title}
-          </div>
-
-          {task.description && (
-            <p className="mt-1 text-sm text-text-secondary">
-              {task.description}
-            </p>
+          {task.recurrence && (
+            <span>
+              <Repeat2 size={11} />
+              {task.recurrence}
+            </span>
           )}
-
-          {/* Due Date */}
-          {task.due_date && (
-            <div
-              className={`mt-2 flex items-center gap-1 text-xs ${
-                isOverdue
-                  ? 'font-medium text-destructive'
-                  : isDueSoon
-                    ? 'font-medium text-warning'
-                    : 'text-text-muted'
-              }`}
-            >
-              <Calendar className="h-3 w-3" />
-              <span>
-                {isOverdue ? 'Overdue: ' : ''}
-                {formatDueDate(task.due_date)}
-              </span>
-            </div>
+          {assigneeName && (
+            <span>
+              <UserRound size={11} />
+              {assigneeName}
+            </span>
           )}
-
-          {/* Tags */}
-          {task.tags && task.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {task.tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="border border-border text-xs"
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Priority Badge */}
-        <Badge
-          variant={priorityBadgeVariant}
-          className={`capitalize ${
-            priorityBadgeVariant === 'default'
-              ? 'bg-priority-medium'
-              : priorityBadgeVariant === 'secondary'
-                ? 'bg-priority-low'
-                : 'bg-priority-high'
-          }`}
-        >
-          {task.priority}
-        </Badge>
-
-        {/* Actions */}
-        <div className="ml-2 flex items-center justify-end gap-2">
-          <button
-            onClick={() => onEdit(task.id)}
-            disabled={isDeleting || isToggling}
-            className="rounded p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-50"
-            aria-label={`Edit task ${task.title}`}
-          >
-            <Edit className="h-4 w-4" />
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting || isToggling}
-            className="rounded p-2 text-text-secondary transition-colors hover:bg-destructive-light hover:text-destructive disabled:opacity-50"
-            aria-label={`Delete task ${task.title}`}
-          >
-            {isDeleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-          </button>
+          {task.tags?.map((tag) => (
+            <span key={tag} className="task-tag">
+              {tag}
+            </span>
+          ))}
         </div>
       </div>
-    </li>
+      <span className={`task-priority ${task.priority}`}>{task.priority}</span>
+      {!readOnly && (
+        <div className="task-actions">
+          <button
+            className="icon-button"
+            aria-label={`Edit task ${task.title}`}
+            disabled={busy}
+            onClick={() => onEdit(task.id)}
+          >
+            <Pencil size={13} />
+          </button>
+          <button
+            className="icon-button danger"
+            aria-label={`Delete task ${task.title}`}
+            disabled={busy}
+            onClick={() => run(() => onDelete(task.id))}
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      )}
+    </article>
   )
 }

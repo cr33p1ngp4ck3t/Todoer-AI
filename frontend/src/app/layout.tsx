@@ -5,8 +5,9 @@ import { Analytics } from '@vercel/analytics/next'
 import '@/app/styles/globals.css'
 
 export const metadata = {
-  title: 'Todoer - Be Productive',
-  description: 'Manage your tasks efficiently',
+  title: 'Todoer AI — A little more clarity',
+  description:
+    'Plan your day, draft tasks with AI, and keep shared projects moving.',
 }
 
 export default function RootLayout({
@@ -17,7 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider attribute="class">
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <AuthProvider>{children}</AuthProvider>
           <Toaster />
         </ThemeProvider>

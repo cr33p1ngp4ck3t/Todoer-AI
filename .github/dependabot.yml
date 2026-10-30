@@ -4,10 +4,20 @@ updates:
     directory: /backend
     schedule:
       interval: weekly
+    ignore:
+      # Passlib's legacy bcrypt verification is incompatible with bcrypt 5.
+      - dependency-name: bcrypt
+        versions: [">=4.1"]
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
+    ignore:
+      # Upgrade these with the Next ESLint plugins once their peer ranges allow it.
+      - dependency-name: eslint
+        versions: [">=10"]
+      - dependency-name: typescript
+        versions: [">=6.1"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

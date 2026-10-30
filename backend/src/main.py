@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
-from src.api import chat, conversations, oauth, tasks, token_refresh, users
+from src.api import chat, conversations, oauth, projects, tasks, token_refresh, users
 from src.lib.database import get_session_sync as get_session
 from src.lib.database import init_db
 from src.lib.logging import JSONFormatter
@@ -90,6 +90,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(tasks.router)
+app.include_router(projects.router)
 app.include_router(users.router)
 
 # Import and include token refresh router
