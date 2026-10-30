@@ -6,6 +6,7 @@ import socket
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["SECRET_KEY"] = "isolated-test-secret-key"
 os.environ["SESSION_SECRET"] = "isolated-test-session-secret"
+os.environ["CORS_ORIGINS"] = "http://localhost:3000"
 os.environ["PYTHON_DOTENV_DISABLED"] = "1"
 for key in (
     "GROQ_API_KEY",

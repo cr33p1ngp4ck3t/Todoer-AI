@@ -52,7 +52,27 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Todo System API", version="1.0.0", lifespan=lifespan)
+# Load the exact allowed browser origins from the environment.
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+cors_origins_list = [
+    origin.strip().replace('"', "") for origin in cors_origins.split(",")
+]
+
+
+class TodoAPI(FastAPI):
+    def build_middleware_stack(self):
+        # CORS must surround ServerErrorMiddleware so unhandled 500s keep headers.
+        return CORSMiddleware(
+            super().build_middleware_stack(),
+            allow_origins=cors_origins_list,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+            expose_headers=["X-Request-ID"],
+        )
+
+
+app = TodoAPI(title="Todo System API", version="1.0.0", lifespan=lifespan)
 
 # Add SessionMiddleware for OAuth (must be added before other middleware)
 # Generate a secret key for session encryption
@@ -93,22 +113,6 @@ def root():
     }
 
 
-# CORS middleware for frontend communication
-# Load CORS origins from environment variable (comma-separated)
-cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000")
-# Parse and strip quotes for robustness
-cors_origins_list = [
-    origin.strip().replace('"', "") for origin in cors_origins.split(",")
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["X-Request-ID"],
-)
 app.add_middleware(RequestContextMiddleware)
 
 # Include routers

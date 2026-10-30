@@ -27,12 +27,27 @@ def test_database_failure_is_unhealthy(client, monkeypatch, path):
     assert client.get("/health/live").status_code == 200
 
 
-def test_unhandled_errors_do_not_expose_internal_details(client, monkeypatch):
+@pytest.mark.parametrize(
+    "origin, allowed_origin",
+    [
+        ("http://localhost:3000", "http://localhost:3000"),
+        ("https://untrusted.example", None),
+    ],
+)
+def test_unhandled_errors_preserve_cors_without_exposing_details(
+    client, monkeypatch, origin, allowed_origin
+):
     def broken_query(*args, **kwargs):
         raise RuntimeError("private database credentials")
 
     with TestClient(main.app, raise_server_exceptions=False) as safe_client:
         monkeypatch.setattr(main, "select", broken_query)
-        response = safe_client.get("/health/ready")
+        response = safe_client.get("/health/ready", headers={"Origin": origin})
     assert response.status_code == 500
     assert response.json() == {"detail": "Internal server error"}
+    assert response.headers.get("access-control-allow-origin") == allowed_origin
+    if allowed_origin:
+        assert response.headers["access-control-allow-credentials"] == "true"
+        assert response.headers["access-control-expose-headers"] == "X-Request-ID"
+        assert "Origin" in response.headers["vary"]
+    assert response.headers["x-request-id"]

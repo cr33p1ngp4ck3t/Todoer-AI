@@ -43,6 +43,7 @@ MANIFEST
 .env.production.local
 
 # Local tooling and test artifacts
+.neon
 .cache/
 .pytest_cache/
 .ruff_cache/
