@@ -33,17 +33,23 @@ with an in-memory transport and verified through a disposable Docker API.
 
 ## Sentry projects
 
-The `todo-nl` organization has `todo-backend` (FastAPI) and `todo-frontend` (Next.js)
-under the `todo` team. Their public ingest DSNs are:
+Use separate `todo-backend` (FastAPI) and `todo-frontend` (Next.js) projects.
+DSNs are configured in ignored local env files; checked-in examples remain blank
+so forks do not send events to someone else's account. When switching accounts,
+replace both DSNs and the frontend source-map organization in `next.config.ts`.
 
-- Backend `SENTRY_DSN`: `https://09d801d475aeb9c58ba2083a9113dc90@o4512344023629824.ingest.us.sentry.io/4512344058232832`
-- Frontend `NEXT_PUBLIC_SENTRY_DSN`: `https://4ae7ab9c6d27298807a0db3cdc766962@o4512344023629824.ingest.us.sentry.io/4512344061116416`
+| Host | Variable | Value |
+| --- | --- | --- |
+| Render backend | `SENTRY_DSN` | DSN from the backend Sentry project. |
+| Render backend | `SENTRY_ENVIRONMENT` | `production` |
+| Vercel frontend | `NEXT_PUBLIC_SENTRY_DSN` | DSN from the frontend Sentry project. |
+| Vercel frontend | `SENTRY_DSN` | The same frontend DSN, for server and edge errors. |
+| Vercel frontend | `SENTRY_ENVIRONMENT` | `production` |
 
-These are ingest identifiers, not auth tokens. They are configured in ignored local
-env files; checked-in examples remain blank so forks do not send events here.
-Set `SENTRY_ENVIRONMENT=production` and `SENTRY_RELEASE` to the deployed commit on
-Render. Set `NEXT_PUBLIC_SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_RELEASE` before building
-Next.js, and use the same release at runtime. Compose forwards the optional settings.
+Save and redeploy both services. The browser DSN is read at build time, so Vercel
+needs a new build. Optional `SENTRY_RELEASE` and `NEXT_PUBLIC_SENTRY_RELEASE` should
+use the deployed commit, with matching frontend values at build and runtime.
+Compose forwards the optional settings.
 
 Next.js captures browser, React render, server, and edge errors and samples 100% of
 development traces and 10% of production traces. It excludes user info, cookies,
@@ -51,24 +57,26 @@ HTTP headers/bodies, and URL query parameters from SDK collection. The backend
 retains the explicit lightweight exception hook described above.
 
 Source-map uploads are enabled when `SENTRY_AUTH_TOKEN` is present during the frontend
-build, targeting only `todo-nl/todo-frontend`. Configure an organization upload token
+build, targeting `todo-frontend` in the organization configured in `next.config.ts`.
+After switching accounts, create an upload token in the new organization. Configure it
 in GitHub Actions repository secrets under that name; CI supplies it to `npm run
-build`. For other builders, set it in the build environment. It must never be a
+build`. For Vercel, add it to the project's build environment. It must never be a
 `NEXT_PUBLIC_` variable or Docker build argument. Without the token, builds still
 work but minified production frontend stack traces need source maps. The token and
 production deployment are separate from the local ingest verification.
 
-Verified on 2026-10-30: [backend exception](https://todo-nl.sentry.io/issues/TODO-BACKEND-1),
-[browser render exception](https://todo-nl.sentry.io/issues/TODO-FRONTEND-1), and
-[Next.js server exception](https://todo-nl.sentry.io/issues/TODO-FRONTEND-2).
-Temporary routes were removed after confirmation. Backend and server source frames
-were readable; the browser event identifies its bundle and still needs uploaded maps
-for original-source context. Test issues remain available for inspection.
+Account-switch verification on 2026-10-30 confirmed backend, browser and Next.js
+server exceptions in the new organization. Temporary local routes were removed
+after confirmation. Backend and server source frames were readable; the browser
+event identifies its bundle and needs uploaded maps for original-source context.
+Test issues remain available for inspection. Hosted DSNs and upload-token changes
+must be applied in the hosting dashboards separately.
 
 ## Validation
 
-On 2026-10-30, locked backend pytest passed locally and in an isolated Docker image
-with networking disabled: **195 passed, 82.20% coverage**, above the 80% gate.
+On 2026-10-30, locked backend pytest passed locally: **196 passed, 82.22% coverage**,
+above the 80% gate. The earlier isolated Docker run with networking disabled passed
+**195 tests with 82.20% coverage**.
 Chatbot and MCP service coverage was 100%. Frontend unit and browser suites each
 passed 17 tests; production builds, lint, formatting, and type checks passed.
 Backend and frontend dependency audits reported no known vulnerabilities.
@@ -81,5 +89,5 @@ VS Code and hosted Codespaces launch were not exercised.
 
 Helm strict lint and kube-score passed, with warnings for unrestricted egress and
 missing host anti-affinity. kubeconform validated 35 objects without errors and
-skipped two Dapr `Component` objects requiring CRD schemas. Hosted GitHub Actions
-and production deployments have not been run for these pending changes.
+skipped two Dapr `Component` objects requiring CRD schemas. Account-switch production
+settings still need to be applied and verified on the hosting platforms.

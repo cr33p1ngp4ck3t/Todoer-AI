@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
 }
 
 export default withSentryConfig(nextConfig, {
-  org: 'todo-nl',
+  org: 'cr33p1ngp4ck3t',
   project: 'todo-frontend',
   authToken: process.env.SENTRY_AUTH_TOKEN,
   silent: !process.env.CI,
