@@ -413,9 +413,9 @@ google-ai-generativelanguage==0.6.15 \
     --hash=sha256:5a03ef86377aa184ffef3662ca28f19eeee158733e45d7947982eb953c6ebb6c \
     --hash=sha256:8f6d9dc4c12b065fe2d0289026171acea5183ebf2d0b11cefe12f3821e159ec3
     # via google-generativeai
-google-api-core==2.33.0 \
-    --hash=sha256:3a36bcc3e319783f4c97da41f6f45ea6ffcaa55848e341de16e09cb70243c2bb \
-    --hash=sha256:a2e22a0c1d0f03eafff1858b38cf46f832d5902b0c052235bf0ab8402929fbdc
+google-api-core==2.43.0 \
+    --hash=sha256:d67355a22d995a009b6c5ca98744ea35fbf4f9c2c006aa0588c0941d1ceb5216 \
+    --hash=sha256:dd588ae9de5e372be89b87c68b1e1555fe89add1809d623182b773d14f96859a
     # via
     #   google-ai-generativelanguage
     #   google-api-python-client
