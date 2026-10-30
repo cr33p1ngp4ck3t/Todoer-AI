@@ -2,5 +2,7 @@
   "enabledPlugins": {
     "serena@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true
-  }
+  },
+  "hooks": {"PreToolUse": [ { "matcher": "ToolPattern", "hooks": [ { "type": "command", "command": "your-script.sh" } ] } ]}
+
 }
